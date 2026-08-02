@@ -309,7 +309,7 @@ function buildBtcCards() {
      stageCls: mvrv<=1.0?'g':mvrv<1.8?'g':mvrv<(F.line??2.5)?'y':'r',
      advice: mvrv<=1.0?'历史底部特征，3×重仓档，越跌越买':mvrv<1.8?'按 2×加码档执行，向 1.0 靠近时升级 3×':mvrv<(F.line??2.5)?'1×定投，逐步减少买入':'过热参考区：停买降档，不清仓（逃顶看回撤+环境确认）',
      why:`MVRV = 市值 ÷ 全市场平均持仓成本。跌破 1.0 = 全市场亏损、抛压枯竭，是历史大底特征（结构锚，可靠）。顶侧：浮盈巨大时获利盘集中兑现，但顶值在压缩（周期峰值 5.88→4.72→3.96→2.52），ETF 时代成本基准快速追赶价格，2025 真顶 MVRV 仅 2.29——固定 2.5 已证伪。浮动顶线 = 压缩基准(周期顶外推)×环境系数(实利/稳定币/ETF)，当前 ${F.line!=null?F.line.toFixed(2):'—'}。顶侧=过热参考+停买降档，不清仓；逃顶看回撤+环境卡。`,
-     chart:{series: (DATA.mvrv_hist||[]).map(p=>({t:p[0], v:p[1]})), refs:[{v:1.0,color:'#3fb950',label:'底1.0'},{v:F.line??2.5,color:'#d29922',label:'浮动顶'+(F.line!=null?F.line.toFixed(2):'')}], fmt: v=>v==null?'—':Number(v).toFixed(2), oFmt: fmtPrice, defOverlay:'btc', cap:8}},
+     chart:{series: (DATA.mvrv_hist||[]).map(p=>({t:p[0], v:p[1]})), series2: (DATA.flt_line_hist||[]).map(p=>({t:p[0], v:p[1]})), refs:[{v:1.0,color:'#3fb950',label:'底1.0'}], s2Label:'浮动顶线', s2Fmt: v=>v==null?'—':Number(v).toFixed(2), fmt: v=>v==null?'—':Number(v).toFixed(2), oFmt: fmtPrice, defOverlay:'btc', cap:8}},
     {name:'距 ATH 回撤', weight:'权重 25%', val:dd==null?'—':fmtPct(dd*100), unit:'', sub:`ATH ${BT.ath_date||''} $${BT.ath?BT.ath.toLocaleString():'—'} · 历史大底回撤 -70%~-85%`,
      bar: dd==null?50:clamp((dd+0.85)/0.85,0,1)*100, score:ddScore,
      stage: dd==null?'—':dd<-0.7?'深度回撤·底部区':dd<-0.45?'深回撤中':'回撤初期',
@@ -732,6 +732,11 @@ function renderDrawer() {
   // 副图指标 attach 到 K 线行 (前向填充)
   const dv = attachDv(view, all);
   const kl = view.map((r,i) => ({timestamp:r.t, open:r.o, high:r.h, low:r.l, close:r.c, volume:r.v, dv: dv[i]}));
+  // MVRV 卡抽屉: 副图画逐日浮动顶线 (dv2, 前向填充; 其他卡不画)
+  if (c.name==='MVRV 估值') {
+    const mtop = attachDv(view, (DATA.flt_line_hist||[]).map(p=>({t:p[0], v:p[1]})));
+    kl.forEach((k,i)=>{ k.m_top = mtop[i]; });
+  }
   // dispose 旧实例 (innerHTML 重建销毁了旧节点, 必须先 dispose)
   if (drawerChart) { try { drawerChart.dispose(); } catch(e){} drawerChart = null; }
   drawerChart = klinecharts.init($('dKline'));
@@ -997,10 +1002,11 @@ klinecharts.registerIndicator({
   name: 'DRW', shortName: '指标', precision: 2,
   figures: [
     {key:'dv', title:'', type:'line', styles: ()=>({style:'solid', color:'#fafafa', size:1.5})},
+    {key:'dv2', title:'浮动顶: ', type:'line', styles: ()=>({style:'dashed', color:'#d29922', size:1})},
     {key:'anchorLow', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})},
     {key:'anchorHigh', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})},
   ],
-  calc: (dataList) => dataList.map(k => ({dv: k.dv ?? null, anchorLow: __drwAnchor.lo, anchorHigh: __drwAnchor.hi})),
+  calc: (dataList) => dataList.map(k => ({dv: k.dv ?? null, dv2: k.m_top ?? null, anchorLow: __drwAnchor.lo, anchorHigh: __drwAnchor.hi})),
   draw: (params) => {
     const {ctx, yAxis} = params;
     const w = ctx.canvas.width, h = ctx.canvas.height;
