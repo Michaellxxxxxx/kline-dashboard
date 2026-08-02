@@ -108,7 +108,12 @@ details.m-why[open] summary{color:var(--faint)}
 .pf-signal{font-size:11px;color:var(--dim);font-family:ui-monospace,Consolas,monospace}
 .pf-frame{border:0;border-radius:12px;width:100%;height:1000px;background:var(--bg)}
 /* ---- 可转债板块表格 ---- */
-.cb-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.cb-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:4px}
+.cb-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:0}
+.cb-table-wrap.w10 .cb-table{min-width:740px}
+.cb-table-wrap.w8 .cb-table{min-width:620px}
+.cb-table-wrap.w5 .cb-table{min-width:500px}
+.cb-empty{color:var(--faint);text-align:center;padding:20px 0;font-size:12px;border:1px dashed var(--border);border-radius:8px;margin-top:4px}
 .cb-table th{text-align:left;padding:6px 10px;color:#c8c8c8;font-weight:600;font-size:11px;border-bottom:1px solid var(--border2);white-space:nowrap}
 .cb-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--dim);white-space:nowrap}
 .cb-table td.bond{color:var(--text);font-weight:600}
@@ -544,8 +549,8 @@ function buildQqqCards() {
   return [
     {name:'MA200 趋势', title:'趋势线', term:'MA200 乖离', weight:'权重 35%', val:maDist==null?'—':fmtPct(maDist*100), unit:'', sub:`MA200 ${fmt$(QQ.ma200,2)} · 乖离轴线 0 牛熊分界 / +20 过热 / -15 超卖`,
      verdict: maDist==null?'—':maDist<MA_OVER_S?'深度超卖区：历史上这里是底部区域，分批接回的时机区':maDist<0?'跌破牛熊线：长期趋势转弱，防守信号':maDist<MA_STRUG?'贴着牛熊线：方向未定，跌破即离场':maDist<MA_OVER?'站上牛熊线：趋势健康，顺势持有':'过热乖离：偏离均线太远，追高风险大',
-     dirTxt: maDist==null?'→ 中性':maDist<0?'↓ 利空':'↑ 利多',
-     dirCls: maDist==null?'y':maDist<0?'r':'g',
+     dirTxt: maDist==null?'→ 中性':maDist<0?'↓ 利空':maDist<MA_STRUG?'→ 中性':'↑ 利多',
+     dirCls: maDist==null?'y':maDist<0?'r':maDist<MA_STRUG?'y':'g',
      range:{v:maDist==null?null:maDist*100, min:-15, max:20, zones:[{to:0,color:'#3fb950'},{to:10,color:'#d29922'},{to:20,color:'#e5484d'}], mid:{v:0,label:'牛熊分界'}, lo:'超卖 -15%', hi:'过热 +20%'},
      bar:maDist==null?50:clamp((maDist+0.3)/0.6,0,1)*100, score:maScore,
      stage: maDist==null?'—':maDist<MA_OVER_S?'深度超卖·历史底区':maDist<0?'跌破200日线·转弱':maDist<MA_STRUG?'贴线挣扎':maDist<MA_OVER?'200日线上方·趋势健康':'过热乖离·追高风险',
@@ -1698,8 +1703,8 @@ function renderCbFrame() {
     </tr>`).join('');
     const deepCards = (s.items||[]).map(r => deepCard(deepMap[r.code], atype)).join('');
     return `<div class="pf-panel" style="animation-delay:${delay}ms"><div class="pf-panel-head"><h3><span class="pf-num">${num}</span>${s.name||s.key}</h3><span class="pf-signal">${(s.items||[]).length} 只候选 · ${s.desc||''}</span></div>
-      <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>转股价值</th><th>溢价%</th><th>评级</th><th>剩年</th><th>规模亿</th><th>回售起始</th><th>触发比例</th></tr></thead>
-      <tbody>${rows || '<tr><td class="empty" colspan="10">当前无候选 - 条件未满足或行情未更新</td></tr>'}</tbody></table>
+      ${rows ? `<div class="cb-table-wrap w10"><table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>转股价值</th><th>溢价%</th><th>评级</th><th>剩年</th><th>规模亿</th><th>回售起始</th><th>触发比例</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>` : '<div class="cb-empty">当前无候选 - 条件未满足或行情未更新</div>'}
       ${deepCards?`<div class="deep-grid">${deepCards}</div>`:''}
     </div>`;
   };
@@ -1711,8 +1716,8 @@ function renderCbFrame() {
       <td style="color:#f85149">${r.status||'—'}</td>
       <td class="num">${r.last_day||'—'}</td></tr>`).join('');
     return `<div class="pf-panel" style="animation-delay:0ms"><div class="pf-panel-head"><h3><span class="pf-num">警</span>强赎预警</h3><span class="pf-signal">已公告/临近强赎 → 持有者必须离场或转股</span></div>
-      <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>状态</th><th>最后交易日</th></tr></thead>
-      <tbody>${rows || '<tr><td class="empty" colspan="5">当前无强赎预警</td></tr>'}</tbody></table></div>`;
+      ${rows ? `<div class="cb-table-wrap w5"><table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>状态</th><th>最后交易日</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>` : '<div class="cb-empty">当前无强赎预警</div>'}</div>`;
   };
   // 双低池
   const dualPanel = () => {
@@ -1722,8 +1727,8 @@ function renderCbFrame() {
       <td class="num" style="color:${(r.prem??0)<=0?'#3fb950':'#f85149'}">${pct(r.prem)}</td>
       <td>${r.rating||'—'}</td><td class="num">${r.years??'—'}</td><td class="num">${r.scale??'—'}</td></tr>`).join('');
     return `<div class="pf-panel" style="animation-delay:0ms"><div class="pf-panel-head"><h3><span class="pf-num">双</span>双低池</h3><span class="pf-signal">价格低 + 溢价低 (90-125元, 高评级) → 债底保护</span></div>
-      <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>双低值</th><th>溢价%</th><th>评级</th><th>剩年</th><th>规模亿</th></tr></thead>
-      <tbody>${rows || '<tr><td class="empty" colspan="8">当前无双低候选</td></tr>'}</tbody></table></div>`;
+      ${rows ? `<div class="cb-table-wrap w8"><table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>双低值</th><th>溢价%</th><th>评级</th><th>剩年</th><th>规模亿</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>` : '<div class="cb-empty">当前无双低候选</div>'}</div>`;
   };
   // 异动
   const moverPanel = () => {
@@ -1731,8 +1736,8 @@ function renderCbFrame() {
       <td class="bond">${jsl(r.code, r.name)}</td><td class="num">${r.price??'—'}</td>
       <td class="num" style="color:${(r.chg??0)>=0?'#f85149':'#3fb950'}">${pct(r.chg)}</td></tr>`).join('');
     return `<div class="pf-panel" style="animation-delay:0ms"><div class="pf-panel-head"><h3><span class="pf-num">异</span>异动榜</h3><span class="pf-signal">单日涨跌 ≥3% (红涨绿跌)</span></div>
-      <table class="cb-table"><thead><tr><th>名称</th><th>现价</th><th>涨跌%</th></tr></thead>
-      <tbody>${rows || '<tr><td class="empty" colspan="3">今日无异动</td></tr>'}</tbody></table></div>`;
+      ${rows ? `<div class="cb-table-wrap"><table class="cb-table"><thead><tr><th>名称</th><th>现价</th><th>涨跌%</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>` : '<div class="cb-empty">今日无异动</div>'}</div>`;
   };
   // ---- 按 tab 组装 ----
   let body;
