@@ -47,7 +47,10 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
 .tag.y{background:rgba(210,153,34,.12);color:#e3b341;border-color:rgba(210,153,34,.25)}
 .tag.n{background:rgba(139,148,158,.12);color:var(--dim);border-color:rgba(139,148,158,.2)}
 /* ---- 指标卡体系 ---- */
+.pf-panel-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.pf-panel-row>.pf-panel{margin-bottom:0}
 .ind-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.ind-grid.ind-single{grid-template-columns:1fr}
 .m-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;transition:border-color .2s,transform .2s,box-shadow .2s}
 .m-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.35)}
 .m-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -198,11 +201,13 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
   .brand{font-size:14px}
   .nav-right{display:none}
   .ind-grid{grid-template-columns:1fr}
+  .pf-panel-row{grid-template-columns:1fr}
   .deep-grid{grid-template-columns:1fr}
   #chart{height:520px}
 }
 @media(max-width:1200px){
   .ind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pf-panel-row{grid-template-columns:repeat(2,minmax(0,1fr))}
   .deep-grid{grid-template-columns:1fr}
 }
 /* ---- 详情抽屉 (全屏 TradingView 式) ---- */
@@ -782,13 +787,32 @@ function renderCards() {
   // 按 board_config 板块分组渲染 (板块即插即用: 改 config 就改布局)
   const bd = (DATA.board && DATA.board.assets || []).find(a => a.id === state.asset);
   const byName = {}; cards.forEach(c => byName[c.name] = c);
-  const panels = (bd && bd.panels || []).map((p, pi) => {
-    if (p.id === 'decision') return '';  // 决策板块单独渲染 (score-panel + 触发清单)
+  // 单卡板块自动并排成行 (≤3 个一行), 多卡/决策板块独占整行
+  const panelHtml = (p, pi, num) => {
     const pCards = (p.cards || []).map(n => byName[n]).filter(Boolean);
-    return `<div class="pf-panel" style="animation-delay:${pi*70}ms"><div class="pf-panel-head"><h3><span class="pf-num">${pi+1}</span>${p.name}</h3><span class="pf-signal">${p.signal || ''}</span></div><div class="ind-grid">${pCards.map(cardHTML).join('')}</div></div>`;
-  }).join('');
+    const inner = `<div class="pf-panel-head"><h3><span class="pf-num">${num}</span>${p.name}</h3><span class="pf-signal">${p.signal || ''}</span></div><div class="ind-grid${pCards.length<=1?' ind-single':''}">${pCards.map(cardHTML).join('')}</div>`;
+    return { html: `<div class="pf-panel" style="animation-delay:${pi*70}ms">${inner}</div>`, count: pCards.length };
+  };
+  const rows = [];  // 渲染行序列: 单卡组为 pf-panel-row, 多卡为单板块
+  let singles = [];  // 待并排的单卡板块
+  let seq = 0;  // 板块序号 (跳过 decision)
+  (bd && bd.panels || []).forEach((p, pi) => {
+    if (p.id === 'decision') return;
+    seq += 1;
+    const r = panelHtml(p, pi, seq);
+    if (r.count <= 1) {
+      singles.push(r.html);
+      if (singles.length >= 3) { rows.push(`<div class="pf-panel-row">${singles.join('')}</div>`); singles = []; }
+    } else {
+      if (singles.length) { rows.push(`<div class="pf-panel-row">${singles.join('')}</div>`); singles = []; }
+      rows.push(r.html);
+    }
+  });
+  if (singles.length) rows.push(`<div class="pf-panel-row">${singles.join('')}</div>`);
+  const panels = rows.join('');
   const deco = bd && bd.panels.find(p => p.id === 'decision');
-  $('indPanel').innerHTML = panels + (deco ? `<div class="pf-panel" style="animation-delay:${(bd.panels.length-1)*70}ms"><div class="pf-panel-head"><h3><span class="pf-num">${bd.panels.length}</span>${deco.name}</h3><span class="pf-signal">${deco.signal || ''}</span></div>${renderScore(cards)}${renderTriggers(cards)}</div>` : '');
+  const decoNum = (bd.panels||[]).filter(p => p.id !== 'decision').length + 1;
+  $('indPanel').innerHTML = panels + (deco ? `<div class="pf-panel" style="animation-delay:${(bd.panels.length-1)*70}ms"><div class="pf-panel-head"><h3><span class="pf-num">${decoNum}</span>${deco.name}</h3><span class="pf-signal">${deco.signal || ''}</span></div>${renderScore(cards)}${renderTriggers(cards)}</div>` : '');
   renderCharts(cards);
 }
 // ============ 详情抽屉 (KLineChart 双图: 主图=价格K线 + 副图=指标, 同步联动) ============
