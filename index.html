@@ -751,6 +751,9 @@ document.addEventListener('click', e => {
 document.addEventListener('click', e => {
   if (e.target.id==='dClose' || e.target.id==='drawerMask') closeDrawer();
 });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('drawer').classList.contains('open')) closeDrawer();
+});
 
 function renderScore(cards) {
   const wFrac = {'权重 55%':0.55,'权重 25%':0.25,'权重 20%':0.20,'权重 40%':0.40,'权重 15%':0.15,'权重 10%':0.10};
