@@ -79,6 +79,33 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
 .m-chart-legend{display:flex;gap:14px;font-size:9px;color:var(--faint);margin-top:5px}
 .m-chart-legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:4px;border-radius:1px}
 .m-chart-legend i.dash{height:0;border-top:1px dashed;background:none}
+/* ---- 组合决策页 ---- */
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-bottom:20px}
+.pf-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.pf-card h3{font-size:12px;color:var(--faint);font-weight:600;letter-spacing:.05em;margin-bottom:12px}
+.pf-gate{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.pf-gate .g-tag{font-size:15px;font-weight:700}
+.pf-gate .g-note{font-size:11px;color:var(--dim)}
+.pf-cap{font-size:13px;line-height:1.8;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--dim)}
+.pf-cap b{font-family:ui-monospace,Consolas,monospace;color:var(--text)}
+.pf-temps{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pf-temp{border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--card2)}
+.pf-temp .t-name{font-size:11px;color:var(--faint);margin-bottom:6px}
+.pf-temp .t-num{font-size:26px;font-weight:700;font-family:ui-monospace,Consolas,monospace}
+.pf-temp .t-mult{font-size:11px;margin-left:6px}
+.pf-temp .t-anchor{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7}
+.pf-temp .t-anchor b{font-family:ui-monospace,Consolas,monospace;color:var(--text)}
+.pf-alloc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.pf-alloc .cell{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.pf-alloc .cell .amt{font-size:22px;font-weight:700;font-family:ui-monospace,Consolas,monospace;line-height:1.2}
+.pf-alloc .cell .lbl{font-size:10px;color:var(--faint);margin-top:4px}
+.pf-alloc .cell .note{font-size:10px;color:var(--dim);margin-top:2px}
+.pf-trig{display:flex;flex-direction:column;gap:6px}
+.pf-trig .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:7px 10px}
+.pf-trig .row .t{color:var(--dim)}
+.pf-trig .row .d{font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
+.pf-desc{font-size:11px;color:var(--faint);line-height:1.8;margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+@media(max-width:760px){.pf-temps{grid-template-columns:1fr}.pf-alloc{grid-template-columns:1fr}}
 /* ---- 综合评价 ---- */
 .score-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
 .score-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
@@ -148,7 +175,8 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
     <span class="brand">投资看板</span>
   </div>
   <div class="nav-tabs" id="assetSeg">
-    <button data-asset="btc" class="on">BTC</button>
+    <button data-asset="port" class="on">组合</button>
+    <button data-asset="btc">BTC</button>
     <button data-asset="qqq">QQQ</button>
   </div>
   <div class="nav-right">更新 <span id="gen"></span> · Yahoo / CoinMetrics / multpl</div>
@@ -156,7 +184,7 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
 
 <div id="indPanel"></div>
 
-<div class="toolbar">
+<div class="toolbar" id="toolbar">
   <div class="seg" id="rangeSeg">
     <button data-range="1m">1M</button>
     <button data-range="3m">3M</button>
@@ -170,7 +198,7 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
     <button data-type="line">涨跌线</button>
   </div>
 </div>
-<div class="chart-card"><div id="chart"></div></div>
+<div class="chart-card" id="chartCard"><div id="chart"></div></div>
 <div class="legend-note" id="legendNote"></div>
 <footer>规则: BTC MVRV 底1.0重仓/顶线参考 · QQQ 跌破200日线离场 · RSI超买70/超卖30 · 仅供自用参考</footer>
 </div>
@@ -187,7 +215,7 @@ const DATA = {"generated": "2026-08-03 00:17", "btc": [{"t": 1410912000000, "o":
 const $ = id => document.getElementById(id);
 $('gen').textContent = DATA.generated;
 
-const state = {asset:'btc', range:'1y', type:'candle'};
+const state = {asset:'port', range:'1y', type:'candle'};
 
 // ---------- 数据 ----------
 const IND = DATA.ind || {};
@@ -826,7 +854,7 @@ function renderDrawer() {
   const rangeSeg = `<div class="seg" id="dRangeSeg">${Object.keys(DRAWER_RANGES).map(r=>`<button data-range="${r}" class="${r===drawerRange?'on':''}">${r==='max'?'MAX':r.toUpperCase()}</button>`).join('')}</div>`;
   const periodSeg = `<div class="seg" id="dPeriodSeg">${['d','w','m'].map(p=>`<button data-period="${p}" class="${p===drawerPeriod?'on':''}">${p==='d'?'日K':p==='w'?'周K':'月K'}</button>`).join('')}</div>`;
   const ovSeg = `<div class="d-ovseg"><button data-ov="btc" class="${pAsset==='btc'?'on':''}">BTC</button><button data-ov="qqq" class="${pAsset==='qqq'?'on':''}">QQQ</button></div>`;
-  const maSeg = pAsset==='qqq' ? `<div class="seg d-maseg" id="dMaSeg"><button data-ma="50" class="${drawerMa[drawerPeriod][50]?'on':''}">MA50</button><button data-ma="200" class="${drawerMa[drawerPeriod][200]?'on':''}">MA200</button></div>` : '';
+  const maSeg = `<div class="seg d-maseg" id="dMaSeg"><button data-ma="50" class="${drawerMa[drawerPeriod][50]?'on':''}">MA50</button><button data-ma="200" class="${drawerMa[drawerPeriod][200]?'on':''}">MA200</button></div>`;
   $('dBody').innerHTML =
     `<div class="d-toolbar">${periodSeg}${maSeg}${rangeSeg}<span class="d-hint">🖱 拖动平移 · 滚轮缩放 · 十字光标读数</span></div>`
     + `<div class="d-chart">${ovSeg}<div id="dKline"></div></div>`
@@ -889,11 +917,12 @@ function renderDrawer() {
   // 均线: MA50/MA200 自由开关 (每周期独立记忆, KLineChart 自动按喂入数据重算)
   // 显式配色防混淆: MA50=蓝(#58a6ff) / MA200=橙(#d29922, 跌破=离场), 与主页图例一致; 默认白色是看混根源 (2026-08-03 用户踩坑)
   const maState = drawerMa[drawerPeriod] || {50:true, 200:true};
-  if (pAsset==='qqq' && maState[50]) {
-    drawerChart.createIndicator({name:'MA', calcParams:[50], styles:{lines:[{color:'#58a6ff', size:1.2}]}}, true, {id:'candle_pane'});
+  // KLineChart v9 同一 pane 不允许同名 indicator (Duplicate indicators) — 必须给唯一 id
+  if (maState[50]) {
+    drawerChart.createIndicator({name:'MA', id:'ma50', calcParams:[50], styles:{lines:[{color:'#58a6ff', size:1.2}]}}, true, {id:'candle_pane'});
   }
-  if (pAsset==='qqq' && maState[200]) {
-    drawerChart.createIndicator({name:'MA', calcParams:[200], styles:{lines:[{color:'#d29922', size:1.2}]}}, true, {id:'candle_pane'});
+  if (maState[200]) {
+    drawerChart.createIndicator({name:'MA', id:'ma200', calcParams:[200], styles:{lines:[{color:'#d29922', size:1.2}]}}, true, {id:'candle_pane'});
   }
   // 副图指标 pane (DRW: dv 曲线 + 动态 refs 虚线 + 锚点强制 y 轴)
   // 每次按卡重新注册: figure title = 指标名 (乖离率/回撤/位置/指标), 消除 "浮动顶: n/a" 残留
@@ -1264,8 +1293,8 @@ function renderChart() {
     chart.createIndicator('MVRV', false, {id:'c_mvrv', height:180});
   } else {
     if (!isMax) {  // MAX 月线视图不叠加日线均线/52周线 (语义不同)
-      chart.createIndicator({name:'MA', calcParams:[50], styles:{lines:[{color:'#58a6ff', size:1.2}]}}, true, {id:'candle_pane'});
-      chart.createIndicator({name:'MA', calcParams:[200], styles:{lines:[{color:'#d29922', size:1.2}]}}, true, {id:'candle_pane'});
+      chart.createIndicator({name:'MA', id:'ma50', calcParams:[50], styles:{lines:[{color:'#58a6ff', size:1.2}]}}, true, {id:'candle_pane'});
+      chart.createIndicator({name:'MA', id:'ma200', calcParams:[200], styles:{lines:[{color:'#d29922', size:1.2}]}}, true, {id:'candle_pane'});
       const hi52 = Math.max(...view.map(r=>r.h)), lo52 = Math.min(...view.map(r=>r.l));
       chart.createOverlay({name:'horizontalSegment', points:[{value:hi52},{value:hi52}], styles:{line:{color:'#8b949e', size:1, style:'dotted'}}});
       chart.createOverlay({name:'horizontalSegment', points:[{value:lo52},{value:lo52}], styles:{line:{color:'#8b949e', size:1, style:'dotted'}}});
@@ -1289,6 +1318,174 @@ function renderChart() {
           <span style="color:#8b949e">· 副图1=温度(0-100, <35低估/&gt;65高估) · 副图2=RSI(超买70/超卖30)</span>`));
 }
 
+// ================= 组合决策页 (统一体系层) =================
+// 第一性原则: 宏观定大方向(敞口上限) → 温度定档位(冷热) → 顶底锚定触发(时间) → 分配定执行
+function macroState() {
+  const RY = DATA.real_yield||[], M2 = DATA.m2_yoy||[], RH = DATA.rate_hist||[];
+  const SC = DATA.stablecap||[], EF = DATA.etf_flow||[];
+  const ry = RY.length ? RY[RY.length-1][1] : null;
+  // M2 同比 (最近值)
+  const m2y = M2.length ? M2[M2.length-1][1] : null;
+  // 10Y 3M 动量 (bp)
+  let r3m = null;
+  if (RH.length) {
+    const t1 = RH[RH.length-1][0], cut = t1 - 90*86400000;
+    for (let i = RH.length-1; i>=0; i--) { if (RH[i][0] <= cut) { r3m = (RH[RH.length-1][1]-RH[i][1])*100; break; } }
+  }
+  // 稳定币 90d 变化
+  let sc90 = null;
+  if (SC.length) {
+    const t1 = SC[SC.length-1][0], cut = t1 - 90*86400000;
+    for (let i = SC.length-1; i>=0; i--) { if (SC[i][0] <= cut) { sc90 = (SC[SC.length-1][1]/SC[i][1]-1)*100; break; } }
+  }
+  // ETF 30d 净流入 (US$m)
+  let etf30 = null;
+  if (EF.length) {
+    const t1 = EF[EF.length-1][0], cut = t1 - 30*86400000;
+    let cum = 0, base = 0;
+    for (let i = 0; i < EF.length; i++) { cum += EF[i][1]; if (EF[i][0] <= cut) base = cum; }
+    etf30 = cum - base;
+  }
+  // 综合宏观分: 每个信号 +1(宽松) / -1(紧缩) / 0(中性)
+  let score = 0, parts = [];
+  if (ry!=null) { if (ry<0){score+=1;parts.push('实利宽松');} else if (ry>2){score-=1;parts.push('实利偏紧');} }
+  if (m2y!=null) { if (m2y>8){score+=1;parts.push('M2 强扩张');} else if (m2y<0){score-=1;parts.push('M2 收缩');} }
+  if (r3m!=null) { if (r3m<-15){score+=1;parts.push('利率回落');} else if (r3m>40){score-=1;parts.push('利率急升');} }
+  if (sc90!=null) { if (sc90>3){score+=1;parts.push('稳定币扩容');} else if (sc90<-3){score-=1;parts.push('稳定币收缩');} }
+  if (etf30!=null) { if (etf30>2000){score+=1;parts.push('ETF 流入');} else if (etf30<-2000){score-=1;parts.push('ETF 流出');} }
+  let regime, cap;
+  if (score>=2) { regime='宽松'; cap=1.0; }
+  else if (score<=-2) { regime='紧缩'; cap=0.5; }
+  else if (score===1) { regime='中性偏松'; cap=0.85; }
+  else if (score===-1) { regime='中性偏紧'; cap=0.85; }
+  else { regime='中性'; cap=0.85; }
+  return {score, parts, regime, cap, ry, m2y, r3m, sc90, etf30};
+}
+
+function renderPortfolio() {
+  const M = macroState();
+  const btcRows = DATA.btc||[], qqqRows = DATA.qqq||[];
+  const btcTemp = btcRows.length ? (btcRows[btcRows.length-1].temp ?? null) : null;
+  const qqqTemp = qqqRows.length ? (qqqRows[qqqRows.length-1].temp ?? null) : null;
+  const BT = IND.btc||{}, QQ = IND.qqq||{};
+  const F = DATA.flt||{};
+  // 组合温度 = 等权 (目标组合基准, 可按目标配置调整)
+  const combTemp = (btcTemp!=null && qqqTemp!=null) ? (btcTemp+qqqTemp)/2 : null;
+  // 温度闸门: 组合温度 → 投入比例 (≤20 3× / ≤35 2× / ≤50 1× / ≤65 0.5× / ≤80 0.25× / >80 0×)
+  let tempGate, tempMult;
+  if (combTemp==null) { tempGate=null; tempMult=null; }
+  else if (combTemp<=20) { tempGate=1.0; tempMult='3× 重仓'; }
+  else if (combTemp<=35) { tempGate=0.85; tempMult='2× 加码'; }
+  else if (combTemp<=50) { tempGate=0.7; tempMult='1× 定投'; }
+  else if (combTemp<=65) { tempGate=0.5; tempMult='0.5× 减半'; }
+  else if (combTemp<=80) { tempGate=0.3; tempMult='0.25× 几乎停'; }
+  else { tempGate=0.15; tempMult='0× 停买'; }
+  // 最终投入比例 = min(宏观闸门, 温度闸门) — 多维度矛盾时取保守 (失效预案)
+  const finalGate = (M.cap!=null && tempGate!=null) ? Math.min(M.cap, tempGate) : (M.cap ?? tempGate ?? 0.85);
+  const totalIn = Math.round(500 * finalGate);
+  const cash = 500 - totalIn;
+  // 资产间分配: 按已有 per-asset 档位 (btc_mult / qqq_mult) 比例, clamp [15%,85%]
+  const bm = TR.btc_mult, qm = TR.qqq_mult;
+  let btcAmt = null, qqqAmt = null, splitNote = '—';
+  if (bm!=null && qm!=null && (bm+qm)>0) {
+    let bs = bm/(bm+qm);
+    bs = Math.max(0.15, Math.min(0.85, bs));
+    btcAmt = Math.round(totalIn*bs);
+    qqqAmt = totalIn - btcAmt;
+    splitNote = `按资产档位 ${multNames[bm]||bm} : ${multNames[qm]||qm} 分配`;
+  }
+  // 顶底锚: BTC
+  const rp = BT.realized_price, mvrv = BT.mvrv, btcPrice = BT.price;
+  const fltLine = F.line ?? 1.615;
+  const btcFloor = rp!=null ? rp*1.0 : null;          // MVRV 1.0 = 已实现价格
+  const btcCeil = rp!=null ? rp*fltLine : null;       // 浮动顶线
+  const btcDistFloor = (btcPrice!=null && btcFloor!=null) ? (btcPrice/btcFloor-1)*100 : null;
+  const btcDistCeil = (btcPrice!=null && btcCeil!=null) ? (btcPrice/btcCeil-1)*100 : null;
+  // 顶底锚: QQQ (乖离率 vs MA200: 底 -15% / 顶 +20%)
+  const ma200 = QQ.ma200, qqqPrice = QQ.price;
+  const qqqDev = (qqqPrice!=null && ma200!=null) ? (qqqPrice/ma200-1)*100 : null;
+  const qqqFloor = ma200!=null ? ma200*0.85 : null;
+  const qqqCeil = ma200!=null ? ma200*1.20 : null;
+  const qqqDistFloor = (qqqPrice!=null && qqqFloor!=null) ? (qqqPrice/qqqFloor-1)*100 : null;
+  const qqqDistCeil = (qqqPrice!=null && qqqCeil!=null) ? (qqqPrice/qqqCeil-1)*100 : null;
+  const cape = IND.cape, capeTrig = TR.qqq_cape && TR.qqq_cape.trigger;
+  // 触发清单 (能确定时间)
+  const btcBottomP = (btcPrice!=null && btcFloor!=null) ? (btcPrice/btcFloor-1)*100 : null;
+  const btcTopP = (btcCeil!=null && btcPrice!=null) ? (btcCeil/btcPrice-1)*100 : null;
+  const qqqBotP = (qqqPrice!=null && qqqFloor!=null) ? (qqqPrice/qqqFloor-1)*100 : null;
+  const qqqTopP = (qqqPrice!=null && qqqCeil!=null) ? (qqqCeil/qqqPrice-1)*100 : null;
+  const qqqMaP = (ma200!=null && qqqPrice!=null) ? (qqqPrice/ma200-1)*100 : null;
+  const trig = [
+    {t:`BTC 底部锚: MVRV ≤ 1.0 (${btcFloor!=null?fmt$(btcFloor):'—'}) → 升 3× 重仓`, d: btcBottomP!=null ? `现价距底 ${(btcBottomP>0?'+':'')+btcBottomP.toFixed(1)}%` : '—', cls: (mvrv!=null&&mvrv<=1.0)?'g':'n'},
+    {t:`BTC 顶部锚: MVRV ≥ ${fltLine.toFixed(3)} 浮动顶 (${btcCeil!=null?fmt$(btcCeil):'—'}) → 停买降档`, d: btcTopP!=null ? `距顶还有 ${btcTopP.toFixed(1)}%` : '—', cls: (mvrv!=null&&mvrv>=fltLine)?'r':'n'},
+    {t:`QQQ 底部锚: 乖离率 ≤ -15% (${qqqFloor!=null?fmt$(qqqFloor):'—'}) → 分批接回`, d: qqqBotP!=null ? `现价距底 ${(qqqBotP>0?'+':'')+qqqBotP.toFixed(1)}%` : '—', cls: (qqqDev!=null&&qqqDev<=-15)?'g':'n'},
+    {t:`QQQ 顶部锚: 乖离率 ≥ +20% (${qqqCeil!=null?fmt$(qqqCeil):'—'}) → 停买`, d: qqqTopP!=null ? `距顶还有 ${qqqTopP.toFixed(1)}%` : '—', cls: (qqqDev!=null&&qqqDev>=20)?'r':'n'},
+    {t:`QQQ 趋势线: MA200 ${ma200!=null?fmt$(ma200):'—'} → 跌破减半/离场`, d: qqqMaP!=null ? `现价乖离 ${(qqqMaP>0?'+':'')+qqqMaP.toFixed(1)}%` : '—', cls: TR.qqq_trend&&TR.qqq_trend.trigger?'r':'n'},
+    {t:`QQQ 估值警戒: CAPE ≥ 40 (现 ${cape!=null?cape.toFixed(1):'—'})`, d: capeTrig?'已触发 · 历史99分位':'未触发', cls: capeTrig?'y':'n'},
+    {t:`宏观转松: 实利 <0 或 M2 >8% → 敞口上限回 100%`, d: `现实利 ${M.ry!=null?M.ry.toFixed(2)+'%':'—'} · M2 ${M.m2y!=null?'+'+M.m2y.toFixed(1)+'%':'—'}`, cls: 'n'},
+    {t:`宏观转紧: 实利 >2.5% 或 10Y 3M >+40bp → 敞口上限锁 50%`, d: `现 10Y 3M ${M.r3m!=null?(M.r3m>0?'+':'')+M.r3m.toFixed(0)+'bp':'—'}`, cls: (M.r3m!=null&&M.r3m>40)?'r':'n'},
+  ];
+  const trigCls = {g:'#3fb950', r:'#e5484d', y:'#d29922', n:'#5c5c5c'};
+  const fmtPp = v => v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%';
+  const gateTxt = finalGate!=null ? Math.round(finalGate*100)+'%' : '—';
+  // 宏观卡
+  const macroHtml = `
+  <div class="pf-card">
+    <h3>① 宏观环境 · 定大方向 (风险敞口上限)</h3>
+    <div class="pf-gate">
+      <span class="g-tag tag ${M.regime==='宽松'?'g':M.regime==='紧缩'?'r':'y'}">${M.regime}</span>
+      <span class="g-note">宏观分 ${M.score>=0?'+':''}${M.score} · ${M.parts.length?M.parts.join(' / '):'信号中性'}</span>
+    </div>
+    <div class="pf-cap">风险敞口上限 <b>${Math.round(M.cap*100)}%</b> · 实利 ${M.ry!=null?M.ry.toFixed(2)+'%':'—'} · M2 同比 ${M.m2y!=null?'+'+M.m2y.toFixed(1)+'%':'—'} · 10Y 3M ${M.r3m!=null?(M.r3m>0?'+':'')+M.r3m.toFixed(0)+'bp':'—'} · 稳定币90d ${fmtPp(M.sc90)} · ETF30d ${M.etf30!=null?(M.etf30>0?'+':'')+'$'+(M.etf30/1000).toFixed(1)+'B':'—'}</div>
+    <div class="pf-desc">五信号 (实利/M2/利率动量/稳定币/ETF) 合成宏观分，≥+2 宽松、≤-2 紧缩。宏观偏紧时再便宜也难大涨 —— 先锁总投入，再看资产冷热。</div>
+  </div>`;
+  // 资产温度卡
+  const tempHtml = `
+  <div class="pf-card">
+    <h3>② 资产温度 · 定档位 (冷热交叉验证)</h3>
+    <div class="pf-temps">
+      <div class="pf-temp">
+        <div class="t-name">BTC 综合温度</div>
+        <div><span class="t-num" style="color:${btcTemp!=null&&btcTemp<35?'#3fb950':btcTemp!=null&&btcTemp>65?'#e5484d':'#fafafa'}">${btcTemp!=null?btcTemp.toFixed(1)+'°':'—'}</span><span class="t-mult tag ${multTag[TR.btc_mult]||'n'}">${TR.btc_mult!=null?multNames[TR.btc_mult]:'—'}</span></div>
+        <div class="t-anchor">下有底: MVRV ≤ 1.0 = ${btcFloor!=null?fmt$(btcFloor):'—'} <b>${btcDistFloor!=null?'(距底 '+fmtPp(btcDistFloor)+')':''}</b><br>上有顶: 浮动线 ${fltLine.toFixed(3)} = ${btcCeil!=null?fmt$(btcCeil):'—'} <b>${btcDistCeil!=null?'(距顶 '+fmtPp(btcDistCeil)+')':''}</b></div>
+      </div>
+      <div class="pf-temp">
+        <div class="t-name">QQQ 综合温度</div>
+        <div><span class="t-num" style="color:${qqqTemp!=null&&qqqTemp<35?'#3fb950':qqqTemp!=null&&qqqTemp>65?'#e5484d':'#fafafa'}">${qqqTemp!=null?qqqTemp.toFixed(1)+'°':'—'}</span><span class="t-mult tag ${multTag[TR.qqq_mult]||'n'}">${TR.qqq_mult!=null?multNames[TR.qqq_mult]:'—'}</span></div>
+        <div class="t-anchor">下有底: 乖离 ≤ -15% = ${qqqFloor!=null?fmt$(qqqFloor):'—'} <b>${qqqDistFloor!=null?'(距底 '+fmtPp(qqqDistFloor)+')':''}</b><br>上有顶: 乖离 ≥ +20% = ${qqqCeil!=null?fmt$(qqqCeil):'—'} <b>${qqqDistCeil!=null?'(距顶 '+fmtPp(qqqDistCeil)+')':''}</b></div>
+      </div>
+    </div>
+    <div class="pf-desc">温度 = 该资产全部评分卡加权 (BTC: MVRV55+回撤25+F&G20；QQQ: MA200/距ATH/RSI/波动率/52周)。一冷一热 = 结构性机会，资金向冷的倾斜；双热 = 系统性风险，都减；双冷 = 全面机会，都加。</div>
+  </div>`;
+  // 组合决策卡
+  const combHtml = `
+  <div class="pf-card">
+    <h3>③ 组合决策 · 本月行动指令 ($500/月)</h3>
+    <div class="pf-gate">
+      <span class="temp-tag">组合温度 <b>${combTemp!=null?combTemp.toFixed(1)+'°':'—'}</b></span>
+      <span class="t-mult tag ${combTemp!=null?(combTemp<=35?'g':combTemp>65?'r':'y'):'n'}">${tempMult||'—'}</span>
+      <span class="g-note">温度闸门 ${tempGate!=null?Math.round(tempGate*100)+'%':'—'} × 宏观闸门 ${Math.round(M.cap*100)}% → 取保守</span>
+    </div>
+    <div class="pf-alloc">
+      <div class="cell"><div class="amt" style="color:#3fb950">${btcAmt!=null?'$'+btcAmt:'—'}</div><div class="lbl">BTC</div><div class="note">${TR.btc_mult!=null?multNames[TR.btc_mult]:'—'}</div></div>
+      <div class="cell"><div class="amt" style="color:#d29922">${qqqAmt!=null?'$'+qqqAmt:'—'}</div><div class="lbl">QQQ</div><div class="note">${TR.qqq_mult!=null?multNames[TR.qqq_mult]:'—'}</div></div>
+      <div class="cell"><div class="amt">${'$'+cash}</div><div class="lbl">现金弹药</div><div class="note">${Math.round(cash/500*100)}% 留存</div></div>
+    </div>
+    <div class="pf-cap">本月总投入 <b>${'$'+totalIn} (${gateTxt})</b> · ${splitNote} · 顶底锚触发时强制改档 (见下方清单)</div>
+    <div class="pf-desc">总投入 = min(宏观闸门, 温度闸门)：宏观和温度互相矛盾时默认取保守 (失效预案第一条)。现金弹药用于顶底锚触发时的 3× 加仓 / 0× 停买。</div>
+  </div>`;
+  // 触发清单卡
+  const trigHtml = `
+  <div class="pf-card">
+    <h3>④ 触发清单 · 能确定时间 (条件满足即动作, 不预测)</h3>
+    <div class="pf-trig">
+      ${trig.map(r=>`<div class="row"><span class="t">${r.t}</span><span class="d" style="color:${trigCls[r.cls]}">${r.d}</span></div>`).join('')}
+    </div>
+    <div class="pf-desc">体系不预测顶底，只在锚点被触发时动作：触及底部锚 → 3× 重仓；触及顶部锚 → 停买降档 (不清仓)；宏观转松/紧 → 敞口上限直接变。全部矛盾时默认降仓观望。</div>
+  </div>`;
+  $('indPanel').innerHTML = `<div class="pf-grid">${macroHtml}${tempHtml}${combHtml}${trigHtml}</div>`;
+}
+
 // 事件
 document.querySelectorAll('#assetSeg button').forEach(b => b.onclick = () => {
   document.querySelectorAll('#assetSeg button').forEach(x=>x.classList.remove('on'));
@@ -1304,6 +1501,16 @@ document.querySelectorAll('#typeSeg button').forEach(b => b.onclick = () => {
 });
 
 function render() {
+  if (state.asset === 'port') {
+    $('toolbar').style.display = 'none';
+    $('chartCard').style.display = 'none';
+    $('legendNote').style.display = 'none';
+    renderPortfolio();
+    return;
+  }
+  $('toolbar').style.display = '';
+  $('chartCard').style.display = '';
+  $('legendNote').style.display = '';
   renderCards();
   renderChart();
 }
