@@ -690,19 +690,20 @@ function aggKlines(rows, period) {
     const key = keyOf(r.t);
     const p = m.get(key);
     if (!p) m.set(key, {t:r.t, o:r.o, c:r.c, l:r.l, h:r.h, v:r.v,
-      mvrv:r.mvrv??null, rsi:r.rsi??null, rp:r.rp??null, top:r.top??null, temp:r.temp??null, dv:r.dv??null});
+      mvrv:r.mvrv??null, rsi:r.rsi??null, rp:r.rp??null, top:r.top??null, temp:r.temp??null, dv:r.dv??null, ma200:r.ma200??null});
     else {
       p.c = r.c; p.h = Math.max(p.h, r.h); p.l = Math.min(p.l, r.l); p.v += r.v;
       if (r.mvrv!=null) p.mvrv = r.mvrv; if (r.rsi!=null) p.rsi = r.rsi;
       if (r.rp!=null) p.rp = r.rp; if (r.top!=null) p.top = r.top;
       if (r.temp!=null) p.temp = r.temp; if (r.dv!=null) p.dv = r.dv;
+      if (r.ma200!=null) p.ma200 = r.ma200;   // 周期末的日线 MA200 (乖离率派生用, 保持日线口径)
     }
   }
   let agg = [...m.values()].sort((a,b)=>a.t-b.t);
   const rsiArr = calcRsi(agg.map(r=>r.c), 14);   // RSI 重算: 基于聚合K线 close (Wilder)
   agg.forEach((r,i)=>{ if (rsiArr[i]!=null) r.rsi = rsiArr[i]; });
-  const ma200Arr = calcMa(agg.map(r=>r.c), 200); // MA200 (聚合K线口径, 乖离率卡派生用)
-  agg.forEach((r,i)=>{ if (ma200Arr[i]!=null) r.ma200 = ma200Arr[i]; });
+  // MA200: 携带周期末的日线 MA200 (p.ma200 取该周期最后一根日K的 ma200, 上面循环已赋值) —
+  // 乖离率卡语义固定为"对日线 200 日均线的乖离", 不能按聚合周期重算 (月K下 200 周期=16.7年, 指标身份变了)
   return agg;
 }
 // 简单移动平均: 前 n-1 个为 null
