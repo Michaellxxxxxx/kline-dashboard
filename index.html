@@ -73,6 +73,24 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
 .m-trig .chip{background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--text)}
 .m-advice{font-size:12px;color:var(--text);line-height:1.5;background:var(--card2);border:1px solid var(--border);border-left:2px solid var(--dim);padding:8px 10px;border-radius:6px;margin:4px 0 10px}
 .m-why{font-size:11px;color:var(--faint);line-height:1.6;border-top:1px dashed var(--border);padding-top:8px;margin-top:auto}
+/* ---- 人话卡头部 (2026-08-03 风格改造: 结论前置) ---- */
+.m-head:has(.m-term) h4{font-size:15px}
+.m-term{font-size:10px;color:var(--faint);font-weight:400;font-family:ui-monospace,Consolas,monospace;border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+.m-verdict-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px}
+.m-dir{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid;flex-shrink:0}
+.m-dir.g{color:#3fb950;border-color:rgba(63,185,80,.4);background:rgba(63,185,80,.08)}
+.m-dir.y{color:#d29922;border-color:rgba(210,153,34,.4);background:rgba(210,153,34,.08)}
+.m-dir.r{color:#e5484d;border-color:rgba(229,72,77,.4);background:rgba(229,72,77,.08)}
+.m-verdict{font-size:13px;color:var(--text);font-weight:600;line-height:1.4}
+.m-range{margin:2px 0 8px}
+.m-range-bar{position:relative;height:10px;border-radius:5px;border:1px solid var(--border);overflow:visible;background:var(--card2)}
+.m-range-bar .m-marker{top:-6px;height:18px}
+.m-range-mid{position:absolute;top:-4px;bottom:-4px;width:1px;background:rgba(255,255,255,.35);z-index:2}
+.m-range-mid span{position:absolute;top:15px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap}
+.m-range-scale{display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-top:5px;font-family:ui-monospace,Consolas,monospace}
+details.m-why{border-top:1px dashed var(--border);padding-top:8px;margin-top:auto;font-size:11px;color:var(--faint);line-height:1.6}
+details.m-why summary{cursor:pointer;color:var(--dim);font-size:11px;user-select:none}
+details.m-why[open] summary{color:var(--faint)}
 /* ---- 卡内双轴图表 ---- */
 .m-chart{position:relative;margin:10px 0 4px}
 .m-chart svg{width:100%;height:110px;display:block;border:1px solid var(--border);border-radius:8px;background:var(--card2)}
@@ -203,6 +221,11 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
 .temp-scale{display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-bottom:12px;font-family:ui-monospace,Consolas,monospace}
 .temp-tag{font-size:11px;color:var(--dim);margin-bottom:4px}
 .temp-tag b{font-family:ui-monospace,Consolas,monospace;font-size:15px}
+@media(max-width:1200px){
+  .ind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pf-panel-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .deep-grid{grid-template-columns:1fr}
+}
 @media(max-width:760px){
   body{padding:0 12px 32px}
   .nav{gap:10px;padding:10px 0}
@@ -212,11 +235,6 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
   .pf-panel-row{grid-template-columns:1fr}
   .deep-grid{grid-template-columns:1fr}
   #chart{height:520px}
-}
-@media(max-width:1200px){
-  .ind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .pf-panel-row{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .deep-grid{grid-template-columns:1fr}
 }
 /* ---- 详情抽屉 (全屏 TradingView 式) ---- */
 .drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;opacity:0;pointer-events:none;transition:opacity .22s}
@@ -425,7 +443,11 @@ function buildBtcCards() {
   const fngScore = clamp((BT.fng??50)/10);
   const fmtPrice = v => v==null?'—':'$'+Math.round(v).toLocaleString();
   return [
-    {name:'MVRV 估值', weight:'权重 55%', val:mvrv, unit:'', sub:`市值/全市场成本(已实现价格 ${fmt$(BT.realized_price)}) · 历史全部(2010起) ${mvrvPct!=null?mvrvPct.toFixed(0):'—'}% 分位 · 现价偏离成本 ${dev==null?'—':fmtPct(dev*100)} · 浮动顶线 ${F.line!=null?F.line.toFixed(2):'—'}(基准${F.base!=null?F.base.toFixed(1):'—'}×环境${F.env!=null?F.env.toFixed(2):'—'}) · 顶部环境 ${E.cred}(${E.env}/稳定币${E.trend})`,
+    {name:'MVRV 估值', title:'贵贱计', term:'MVRV', weight:'权重 55%', val:mvrv, unit:'', sub:`现价偏离成本 ${dev==null?'—':fmtPct(dev*100)} · 浮动顶线 ${F.line!=null?F.line.toFixed(2):'—'}（基准${F.base!=null?F.base.toFixed(1):'—'}×环境${F.env!=null?F.env.toFixed(2):'—'}） · 顶部环境 ${E.cred}(${E.env}/稳定币${E.trend})`,
+     verdict: mvrv<=MV_BOT?'历史大底区：全市场都亏、抛压枯竭，是机会不是风险':mvrv<MV_LOW?'低位区：便宜，越靠近底部性价比越高':mvrv<(F.line??2.5)?'偏高区：已经不便宜，追高风险上升':'过热区：估值贵，停买降档观察',
+     dirTxt: mvrv<=MV_LOW?'↑ 利多':mvrv>=(F.line??2.5)?'↓ 利空':'→ 中性',
+     dirCls: mvrv<=MV_LOW?'g':mvrv>=(F.line??2.5)?'r':'y',
+     range:{v:mvrv, min:MV_BOT, max:(F.line??2.5), zones:[{to:MV_BOT+((F.line??2.5)-MV_BOT)*0.35,color:'#3fb950'},{to:MV_BOT+((F.line??2.5)-MV_BOT)*0.7,color:'#d29922'},{to:(F.line??2.5),color:'#e5484d'}], lo:'底 '+Number(MV_BOT).toFixed(1), hi:'顶 '+(F.line!=null?F.line.toFixed(2):'2.50')},
      bar:(mvrv-MV_BOT)/MV_RNG*100, score:mvrvScore,
      stage: mvrv<=MV_BOT?'深熊底部区':mvrv<MV_LOW?'低位区':mvrv<(F.line??2.5)?'偏高区':'过热区(参考)',
      stageCls: mvrv<=MV_BOT?'g':mvrv<MV_LOW?'g':mvrv<(F.line??2.5)?'y':'r',
@@ -520,7 +542,11 @@ function buildQqqCards() {
   const rsiSeries = DATA.qqq.map(r=>({t:r.t, v:r.rsi_w})).filter(p=>p.v!=null);   // 卡图用周线
   const volSeries = DATA.qqq.map(r=>({t:r.t, v:r.vol20})).filter(p=>p.v!=null);
   return [
-    {name:'MA200 趋势', weight:'权重 35%', val:maDist==null?'—':fmtPct(maDist*100), unit:'', sub:`MA200 ${fmt$(QQ.ma200,2)} · 乖离率轴线 0牛熊分界 / +20过热 / -15超卖 · 价格在上=多, 在下=空`,
+    {name:'MA200 趋势', title:'趋势线', term:'MA200 乖离', weight:'权重 35%', val:maDist==null?'—':fmtPct(maDist*100), unit:'', sub:`MA200 ${fmt$(QQ.ma200,2)} · 乖离轴线 0 牛熊分界 / +20 过热 / -15 超卖`,
+     verdict: maDist==null?'—':maDist<MA_OVER_S?'深度超卖区：历史上这里是底部区域，分批接回的时机区':maDist<0?'跌破牛熊线：长期趋势转弱，防守信号':maDist<MA_STRUG?'贴着牛熊线：方向未定，跌破即离场':maDist<MA_OVER?'站上牛熊线：趋势健康，顺势持有':'过热乖离：偏离均线太远，追高风险大',
+     dirTxt: maDist==null?'→ 中性':maDist<0?'↓ 利空':'↑ 利多',
+     dirCls: maDist==null?'y':maDist<0?'r':'g',
+     range:{v:maDist==null?null:maDist*100, min:-15, max:20, zones:[{to:0,color:'#3fb950'},{to:10,color:'#d29922'},{to:20,color:'#e5484d'}], mid:{v:0,label:'牛熊分界'}, lo:'超卖 -15%', hi:'过热 +20%'},
      bar:maDist==null?50:clamp((maDist+0.3)/0.6,0,1)*100, score:maScore,
      stage: maDist==null?'—':maDist<MA_OVER_S?'深度超卖·历史底区':maDist<0?'跌破200日线·转弱':maDist<MA_STRUG?'贴线挣扎':maDist<MA_OVER?'200日线上方·趋势健康':'过热乖离·追高风险',
      stageCls: maDist==null?'n':maDist<MA_OVER_S?'g':maDist<0?'r':maDist<MA_STRUG?'y':maDist<MA_OVER?'g':'r',
@@ -753,6 +779,17 @@ function gaugeHTML(g){
   const val = g.v==null ? '—' : (g.fmt?g.fmt(g.v):g.v);
   return `<div class="mg-row"><span class="mg-name">${g.name}</span><div class="mg-bar" style="background:${bg}">${mark}</div><span class="mg-val">${val}</span></div><div class="mg-scale">${(g.scale||[]).map(s=>`<span>${s}</span>`).join('')}</div>`;
 }
+// 卡级主区间条 (2026-08-03 风格改造): 左=底(绿) 右=顶(红), 白标记=当前值, 可选 mid 参考线
+function rangeHTML(r){
+  if (!r) return '';
+  const p = v => clamp((v-r.min)/(r.max-r.min)*100, 0, 100);
+  let prev = r.min, stops = [];
+  (r.zones||[]).forEach(z => { const pv = p(Math.min(z.to, r.max)); stops.push(`${z.color} ${p(prev).toFixed(1)}% ${pv.toFixed(1)}%`); prev = Math.min(z.to, r.max); });
+  const bg = `linear-gradient(to right, ${stops.join(',')})`;
+  const mark = r.v==null ? '' : `<div class="m-marker" style="left:${p(r.v).toFixed(1)}%"></div>`;
+  const mid = r.mid==null ? '' : `<div class="m-range-mid" style="left:${p(r.mid.v).toFixed(1)}%"><span>${r.mid.label||''}</span></div>`;
+  return `<div class="m-range"><div class="m-range-bar" style="background:${bg}">${mark}${mid}</div><div class="m-range-scale"><span>${r.lo||''}</span><span>${r.hi||''}</span></div></div>`;
+}
 // 板块参数读取: board_config.json → params (阈值可调, 即插即用)
 function panelP(pid, key, def) {
   const a = (DATA.board && DATA.board.assets || []).find(x => x.id === state.asset);
@@ -770,6 +807,15 @@ function renderCards() {
   cards.forEach(c => { if (c.chart && overlaySel[c.name]===undefined) overlaySel[c.name] = c.chart.defOverlay||null; });
   const cardHTML = c => `
   <div class="m-card">
+    ${c.title?`
+    <div class="m-head"><h4>${c.title}<span class="m-term">${c.term||''}</span></h4><span class="w">${c.weight}</span></div>
+    <div class="m-verdict-row"><span class="m-dir ${c.dirCls||'y'}">${c.dirTxt||'→ 中性'}</span><span class="m-verdict">${c.verdict||''}</span></div>
+    ${rangeHTML(c.range)}
+    <div><span class="m-val">${c.val}</span><span class="unit">${c.unit}</span><span class="tag ${c.stageCls}" style="margin-left:8px">${c.stage}</span></div>
+    <div class="m-sub">${c.sub}</div>
+    ${c.gauge?`<div class="m-gauges">${c.gauge.map(gaugeHTML).join('')}</div>`:''}
+    ${c.trig?`<div class="m-trig">${c.trig.chips.map(t=>`<span class="chip" style="border-color:${t.cls==='g'?'#3fb950':t.cls==='r'?'#e5484d':'#d29922'}">${t.txt}</span>`).join('')}<span class="tag ${c.trig.cls}">${c.trig.verdict}</span></div>`:''}
+    `:`
     <div class="m-head"><h4>${c.name}</h4><span class="w">${c.weight}</span></div>
     <div><span class="m-val">${c.val}</span><span class="unit">${c.unit}</span><span class="tag ${c.stageCls}" style="margin-left:8px">${c.stage}</span></div>
     <div class="m-sub">${c.sub}</div>
@@ -778,6 +824,7 @@ function renderCards() {
     <div class="m-quant">${c.score==null ? (c.envNote||'') : `顶底量化位置 ${clamp(c.bar,0,100).toFixed(0)}% · 得分 ${c.score.toFixed(1)}/10`}</div>
     ${c.gauge?`<div class="m-gauges">${c.gauge.map(gaugeHTML).join('')}</div>`:''}
     ${c.trig?`<div class="m-trig">${c.trig.chips.map(t=>`<span class="chip" style="border-color:${t.cls==='g'?'#3fb950':t.cls==='r'?'#e5484d':'#d29922'}">${t.txt}</span>`).join('')}<span class="tag ${c.trig.cls}">${c.trig.verdict}</span></div>`:''}
+    `}
     ${c.chart?`
     <div class="m-chart d-enlarge" data-card="${c.name}" title="点击查看详情 · ESC 退出">
       <div class="m-chart-body"></div>
@@ -789,8 +836,8 @@ function renderCards() {
       <span><i style="background:#3291ff"></i>叠加价格</span>
       ${(c.chart.refs||[]).map(r=>`<span><i class="dash" style="border-color:${r.color}"></i>${r.label}</span>`).join('')}
     </div>`:''}
-    <div class="m-advice">💡 ${c.advice}</div>
-    <div class="m-why">📐 为什么能判断顶底：${c.why}</div>
+    ${c.title?`<details class="m-why"><summary>📐 为什么能判断顶底</summary>${c.why}</details>`:`<div class="m-advice">💡 ${c.advice}</div>
+    <div class="m-why">📐 为什么能判断顶底：${c.why}</div>`}
   </div>`;
   // 按 board_config 板块分组渲染 (板块即插即用: 改 config 就改布局)
   const bd = (DATA.board && DATA.board.assets || []).find(a => a.id === state.asset);
