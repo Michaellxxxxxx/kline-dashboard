@@ -701,31 +701,32 @@ function closeDrawer() {
   if (drawerChart) { try { drawerChart.dispose(); } catch(e){} drawerChart = null; }
   drawerCard = null; drawerChart = null;
 }
-// 副图指标序列: 价格型卡(series 即价格)派生 偏离/回撤/位置, 指标型卡直接用
+// 副图指标序列: 价格型卡(series 即价格)派生 乖离率/回撤/位置, 指标型卡直接用
+// title: 副图指标名 (显示在 tooltip 与 pane 图例), precision: 副图数值精度
 function drawerMetric(c, curAsset) {
   const isPriceSeries = c.chart.series === PRICE[curAsset];
-  if (!isPriceSeries) return {series: c.chart.series, refs: c.chart.refs||[]};
+  if (!isPriceSeries) return {series: c.chart.series, refs: c.chart.refs||[], title: c.name.split(' ')[0], precision: 2};
   const price = PRICE[curAsset];
   const refs = c.chart.refs||[];
   if (c.chart.series2 && c.chart.series2.length) {
-    // MA200 卡: 偏离% = price/ma200 - 1
+    // MA200 卡: 乖离率% = (price/ma200 - 1)*100
     const ma = new Map(c.chart.series2.map(p=>[p.t, p.v]));
-    return {series: price.map(p=>({t:p.t, v: ma.has(p.t)&&ma.get(p.t) ? p.v/ma.get(p.t)-1 : null})).filter(p=>p.v!=null),
-            refs: [{v:0,color:'#8b8b8b',label:'0'}], fmt: v=>v==null?'—':(v*100).toFixed(1)+'%'};
+    return {series: price.map(p=>({t:p.t, v: ma.has(p.t)&&ma.get(p.t) ? (p.v/ma.get(p.t)-1)*100 : null})).filter(p=>p.v!=null),
+            refs: [{v:0,color:'#8b8b8b',label:'0'}], fmt: v=>v==null?'—':v.toFixed(1)+'%', title:'乖离率', precision:1};
   }
   if (refs.length===1 && refs[0].label==='ATH') {
-    // 距ATH 卡: 回撤% = price/ATH - 1
+    // 距ATH 卡: 回撤% = (price/ATH - 1)*100
     const ath = refs[0].v;
-    return {series: price.map(p=>({t:p.t, v: p.v/ath-1})).filter(p=>p.v!=null),
-            refs: [{v:0,color:'#8b8b8b',label:'0'}], fmt: v=>v==null?'—':(v*100).toFixed(1)+'%'};
+    return {series: price.map(p=>({t:p.t, v: (p.v/ath-1)*100})).filter(p=>p.v!=null),
+            refs: [{v:0,color:'#8b8b8b',label:'0'}], fmt: v=>v==null?'—':v.toFixed(1)+'%', title:'回撤', precision:1};
   }
   if (refs.length===2) {
     // 52周位置卡: 位置% = (price-lo)/(hi-lo)*100
     const hi = Math.max(refs[0].v, refs[1].v), lo = Math.min(refs[0].v, refs[1].v);
     return {series: price.map(p=>({t:p.t, v: hi>lo ? (p.v-lo)/(hi-lo)*100 : null})).filter(p=>p.v!=null),
-            refs: [{v:0,color:'#3fb950',label:'0'},{v:100,color:'#e5484d',label:'100'}], fmt: v=>v==null?'—':v.toFixed(0)+'%'};
+            refs: [{v:0,color:'#3fb950',label:'0'},{v:100,color:'#e5484d',label:'100'}], fmt: v=>v==null?'—':v.toFixed(0)+'%', title:'52周位置', precision:0};
   }
-  return {series: price, refs};
+  return {series: price, refs, title: c.name.split(' ')[0], precision: 2};
 }
 // attach 指标序列到 K 线行 (前向填充, 双指针 O(n))
 function attachDv(rows, series) {
@@ -819,6 +820,8 @@ function renderDrawer() {
     drawerChart.createIndicator({name:'MA', calcParams:[200]}, true, {id:'candle_pane'});
   }
   // 副图指标 pane (DRW: dv 曲线 + 动态 refs 虚线 + 锚点强制 y 轴)
+  // 每次按卡重新注册: figure title = 指标名 (乖离率/回撤/位置/指标), 消除 "浮动顶: n/a" 残留
+  registerDrw(dm.title || '指标', dm.precision != null ? dm.precision : 2);
   drawerChart.setPaneOptions('candle_pane', {height: Math.min(340, Math.max(220, (document.getElementById('dKline').clientHeight||420) - 190))});
   drawerChart.createIndicator('DRW', false, {id:'c_drw', height:150});
   // 范围切换
@@ -1042,35 +1045,44 @@ klinecharts.registerIndicator({
     return true;
   }
 });
-// 注册抽屉通用指标 indicator (副图: 指标曲线 + 动态 refs 虚线 + 锚点强制 y 轴)
+// 抽屉副图指标 (DRW: dv 曲线 + 动态 refs 虚线 + 锚点强制 y 轴)
 // __drwRefs/__drwAnchor 由 renderDrawer 每次设置 (每张卡 refs 不同)
+// registerDrw(title, precision): 按卡动态注册, figure title = 指标名 (乖离率/回撤/位置/指标);
+//   浮动顶线 figure (dv2) 仅 MVRV 卡注册 — 其他卡 tooltip 不再出现 "浮动顶: n/a"
 let __drwRefs = [], __drwAnchor = {lo: 0, hi: 100};
-klinecharts.registerIndicator({
-  name: 'DRW', shortName: '指标', precision: 2,
-  figures: [
-    {key:'dv', title:'', type:'line', styles: ()=>({style:'solid', color:'#fafafa', size:1.5})},
-    {key:'dv2', title:'浮动顶: ', type:'line', styles: ()=>({style:'dashed', color:'#d29922', size:1})},
-    {key:'anchorLow', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})},
-    {key:'anchorHigh', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})},
-  ],
-  calc: (dataList) => dataList.map(k => ({dv: k.dv ?? null, dv2: k.m_top ?? null, anchorLow: __drwAnchor.lo, anchorHigh: __drwAnchor.hi})),
-  draw: (params) => {
-    const {ctx, yAxis} = params;
-    const w = ctx.canvas.width, h = ctx.canvas.height;
-    ctx.save();
-    (__drwRefs||[]).forEach(r => {
-      const y = yAxis.convertToPixel(r.v);
-      const yc = Math.max(0, Math.min(y, h));
-      ctx.strokeStyle = r.color; ctx.setLineDash([5,4]); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, yc); ctx.lineTo(w, yc); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = r.color; ctx.font = '10px ui-monospace,Consolas,monospace';
-      ctx.fillText(r.label, w - ctx.measureText(r.label).width - 6, yc - 4);
-    });
-    ctx.restore();
-    return false;  // 返回 false: 引擎继续画 dv 曲线, draw 只负责 refs 虚线
-  }
-});
+let __drwShowFlt = false;
+function registerDrw(title, precision) {
+  __drwShowFlt = (drawerCard && drawerCard.name === 'MVRV 估值');
+  const figs = [
+    {key:'dv', title: title+': ', type:'line', styles: ()=>({style:'solid', color:'#fafafa', size:1.5})},
+  ];
+  if (__drwShowFlt) figs.push({key:'dv2', title:'浮动顶: ', type:'line', styles: ()=>({style:'dashed', color:'#d29922', size:1})});
+  figs.push({key:'anchorLow', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})});
+  figs.push({key:'anchorHigh', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})});
+  klinecharts.registerIndicator({
+    name: 'DRW', shortName: title, precision: precision,
+    figures: figs,
+    calc: (dataList) => dataList.map(k => ({dv: k.dv ?? null, dv2: k.m_top ?? null, anchorLow: __drwAnchor.lo, anchorHigh: __drwAnchor.hi})),
+    draw: (params) => {
+      const {ctx, yAxis} = params;
+      const w = ctx.canvas.width, h = ctx.canvas.height;
+      ctx.save();
+      (__drwRefs||[]).forEach(r => {
+        const y = yAxis.convertToPixel(r.v);
+        const yc = Math.max(0, Math.min(y, h));
+        ctx.strokeStyle = r.color; ctx.setLineDash([5,4]); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, yc); ctx.lineTo(w, yc); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = r.color; ctx.font = '10px ui-monospace,Consolas,monospace';
+        ctx.fillText(r.label, w - ctx.measureText(r.label).width - 6, yc - 4);
+      });
+      ctx.restore();
+      return false;  // 返回 false: 引擎继续画 dv 曲线, draw 只负责 refs 虚线
+    }
+  });
+}
+// 初始注册 (默认 '指标', 2 位精度; renderDrawer 每次按卡重注册覆盖)
+registerDrw('指标', 2);
 // 注册 PE indicator (副图: 曲线 + 25/30 线 + 高估红区)
 klinecharts.registerIndicator({
   name: 'PE', shortName: 'PE', precision: 2,
