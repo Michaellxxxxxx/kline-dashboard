@@ -672,6 +672,7 @@ document.addEventListener('click', e => {
 
 // ============ 详情抽屉 (KLineChart 双图: 主图=价格K线 + 副图=指标, 同步联动) ============
 let drawerCard = null, drawerRange = '1y', drawerPeriod = 'd', drawerOverlay = null;
+let drawerMa = {d:{50:true,200:true}, w:{50:true,200:true}, m:{50:false,200:false}};  // 每周期 MA50/MA200 开关独立记忆
 let drawerChart = null;  // 抽屉 KLineChart 实例 (dispose 生命周期)
 const DRAWER_RANGES = {'1m':30, '6m':182, '1y':365, '2y':730, 'max':null};
 function filterSeries(series, days) {
@@ -825,8 +826,9 @@ function renderDrawer() {
   const rangeSeg = `<div class="seg" id="dRangeSeg">${Object.keys(DRAWER_RANGES).map(r=>`<button data-range="${r}" class="${r===drawerRange?'on':''}">${r==='max'?'MAX':r.toUpperCase()}</button>`).join('')}</div>`;
   const periodSeg = `<div class="seg" id="dPeriodSeg">${['d','w','m'].map(p=>`<button data-period="${p}" class="${p===drawerPeriod?'on':''}">${p==='d'?'日K':p==='w'?'周K':'月K'}</button>`).join('')}</div>`;
   const ovSeg = `<div class="d-ovseg"><button data-ov="btc" class="${pAsset==='btc'?'on':''}">BTC</button><button data-ov="qqq" class="${pAsset==='qqq'?'on':''}">QQQ</button></div>`;
+  const maSeg = pAsset==='qqq' ? `<div class="seg d-maseg" id="dMaSeg"><button data-ma="50" class="${drawerMa[drawerPeriod][50]?'on':''}">MA50</button><button data-ma="200" class="${drawerMa[drawerPeriod][200]?'on':''}">MA200</button></div>` : '';
   $('dBody').innerHTML =
-    `<div class="d-toolbar">${periodSeg}${rangeSeg}<span class="d-hint">🖱 拖动平移 · 滚轮缩放 · 十字光标读数</span></div>`
+    `<div class="d-toolbar">${periodSeg}${maSeg}${rangeSeg}<span class="d-hint">🖱 拖动平移 · 滚轮缩放 · 十字光标读数</span></div>`
     + `<div class="d-chart">${ovSeg}<div id="dKline"></div></div>`
     + `<div class="d-stats">
         <div class="d-stat"><div class="k">当前值</div><div class="v">${fmt(cur)}</div></div>
@@ -884,10 +886,14 @@ function renderDrawer() {
       drawerChart.createOverlay({name:'horizontalSegment', points:[{value:r.v},{value:r.v}], styles:{line:{color:r.color, size:1, style:'dashed'}}});
     });
   }
-  // 均线: 日K/周K 叠加 MA50/MA200 (KLineChart 自动按喂入数据重算), 月K 不叠加 (MA200=16.7年无意义)
-  if (pAsset==='qqq' && drawerPeriod!=='m') {
-    drawerChart.createIndicator({name:'MA', calcParams:[50]}, true, {id:'candle_pane'});
-    drawerChart.createIndicator({name:'MA', calcParams:[200]}, true, {id:'candle_pane'});
+  // 均线: MA50/MA200 自由开关 (每周期独立记忆, KLineChart 自动按喂入数据重算)
+  // 显式配色防混淆: MA50=蓝(#58a6ff) / MA200=橙(#d29922, 跌破=离场), 与主页图例一致; 默认白色是看混根源 (2026-08-03 用户踩坑)
+  const maState = drawerMa[drawerPeriod] || {50:true, 200:true};
+  if (pAsset==='qqq' && maState[50]) {
+    drawerChart.createIndicator({name:'MA', calcParams:[50], styles:{lines:[{color:'#58a6ff', size:1.2}]}}, true, {id:'candle_pane'});
+  }
+  if (pAsset==='qqq' && maState[200]) {
+    drawerChart.createIndicator({name:'MA', calcParams:[200], styles:{lines:[{color:'#d29922', size:1.2}]}}, true, {id:'candle_pane'});
   }
   // 副图指标 pane (DRW: dv 曲线 + 动态 refs 虚线 + 锚点强制 y 轴)
   // 每次按卡重新注册: figure title = 指标名 (乖离率/回撤/位置/指标), 消除 "浮动顶: n/a" 残留
@@ -897,6 +903,8 @@ function renderDrawer() {
   // 范围切换 + 周期切换
   $('dRangeSeg').querySelectorAll('button').forEach(b => b.onclick = () => { drawerRange = b.dataset.range; renderDrawer(); });
   $('dPeriodSeg').querySelectorAll('button').forEach(b => b.onclick = () => { drawerPeriod = b.dataset.period; renderDrawer(); });
+  const maSegEl = $('dMaSeg');
+  if (maSegEl) maSegEl.querySelectorAll('button').forEach(b => b.onclick = () => { drawerMa[drawerPeriod][b.dataset.ma] = !drawerMa[drawerPeriod][b.dataset.ma]; renderDrawer(); });
   $('dBody').querySelectorAll('.d-ovseg button').forEach(b => b.onclick = () => { drawerOverlay = b.dataset.ov; renderDrawer(); });
 }
 // 抽屉图 resize (窗口变化时跟随)
@@ -1256,8 +1264,8 @@ function renderChart() {
     chart.createIndicator('MVRV', false, {id:'c_mvrv', height:180});
   } else {
     if (!isMax) {  // MAX 月线视图不叠加日线均线/52周线 (语义不同)
-      chart.createIndicator({name:'MA', calcParams:[50]}, true, {id:'candle_pane'});
-      chart.createIndicator({name:'MA', calcParams:[200]}, true, {id:'candle_pane'});
+      chart.createIndicator({name:'MA', calcParams:[50], styles:{lines:[{color:'#58a6ff', size:1.2}]}}, true, {id:'candle_pane'});
+      chart.createIndicator({name:'MA', calcParams:[200], styles:{lines:[{color:'#d29922', size:1.2}]}}, true, {id:'candle_pane'});
       const hi52 = Math.max(...view.map(r=>r.h)), lo52 = Math.min(...view.map(r=>r.l));
       chart.createOverlay({name:'horizontalSegment', points:[{value:hi52},{value:hi52}], styles:{line:{color:'#8b949e', size:1, style:'dotted'}}});
       chart.createOverlay({name:'horizontalSegment', points:[{value:lo52},{value:lo52}], styles:{line:{color:'#8b949e', size:1, style:'dotted'}}});
