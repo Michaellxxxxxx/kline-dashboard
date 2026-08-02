@@ -47,7 +47,7 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
 .tag.y{background:rgba(210,153,34,.12);color:#e3b341;border-color:rgba(210,153,34,.25)}
 .tag.n{background:rgba(139,148,158,.12);color:var(--dim);border-color:rgba(139,148,158,.2)}
 /* ---- 指标卡体系 ---- */
-.ind-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-bottom:20px}
+.ind-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
 .m-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;transition:border-color .2s,transform .2s,box-shadow .2s}
 .m-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.35)}
 .m-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -93,11 +93,19 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
 .cb-table td.num{font-family:ui-monospace,Consolas,monospace}
 .cb-table tr:hover td{background:var(--card2)}
 .cb-table td.empty{color:var(--faint);text-align:center;padding:18px 0;white-space:normal}
-.cb-strip{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.cb-strip .cell{background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--dim)}
-.cb-strip .cell b{font-family:ui-monospace,Consolas,monospace;color:var(--text);margin-left:4px}
+.cb-strip{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:10px;font-size:12px;color:var(--faint)}
+.cb-strip .cell b{font-family:ui-monospace,Consolas,monospace;color:var(--dim);margin-left:4px}
+.cb-tabs{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:16px}
+.cb-tab{position:relative;display:inline-flex;align-items:center;gap:6px;background:none;border:none;border-radius:0;padding:9px 12px;font-size:13px;color:var(--dim);cursor:pointer;transition:color .15s;font-family:inherit}
+.cb-tab:hover{color:var(--text)}
+.cb-tab.on{color:#fafafa;font-weight:600}
+.cb-tab.on::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:2px;background:#fafafa;border-radius:1px}
+.cb-tab .cnt{font-family:ui-monospace,Consolas,monospace;font-size:11px;padding:0 7px;border-radius:10px;background:rgba(255,255,255,.08);color:var(--dim)}
+.cb-tab.on .cnt{background:rgba(255,255,255,.16);color:var(--text)}
+.cb-tab .cnt.hot{color:#e5484d}
+.cb-tab.on .cnt.hot{color:#f85149}
 /* ---- 可转债深析卡 (原版完整) ---- */
-.deep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-top:14px}
+.deep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
 .dim-card{border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--card2);transition:border-color .2s,transform .2s}
 .dim-card:hover{border-color:var(--border2);transform:translateY(-1px)}
 .dim-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
@@ -138,7 +146,6 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
   .m-card:hover,.pf-card:hover,.dim-card:hover{transform:none}
 }
 /* ---- 组合决策页 ---- */
-.pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-bottom:20px}
 .pf-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color .2s,transform .2s}
 .pf-card:hover{border-color:var(--border2);transform:translateY(-1px)}
 .pf-card h3{font-size:13px;color:#c8c8c8;font-weight:650;letter-spacing:.02em;margin-bottom:12px}
@@ -191,7 +198,12 @@ footer{color:var(--faint);font-size:10px;text-align:center;margin-top:16px}
   .brand{font-size:14px}
   .nav-right{display:none}
   .ind-grid{grid-template-columns:1fr}
+  .deep-grid{grid-template-columns:1fr}
   #chart{height:520px}
+}
+@media(max-width:1200px){
+  .ind-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .deep-grid{grid-template-columns:1fr}
 }
 /* ---- 详情抽屉 (全屏 TradingView 式) ---- */
 .drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;opacity:0;pointer-events:none;transition:opacity .22s}
@@ -1436,7 +1448,7 @@ function renderTriggers(cards) {
 function renderCbFrame() {
   const CB = DATA.cb;
   if (!CB || !CB.strategies) {
-    $('indPanel').innerHTML = `<div class="pf-panel"><div class="pf-panel-head"><h3>可转债</h3><span class="pf-signal">数据未生成</span></div><div class="pf-desc">cb_data.json 不存在 —— 先运行 <b>build_cb_dashboard.py</b> (拉取集思录行情 + 条款字典筛选) 生成数据。</div></div>`;
+    $('indPanel').innerHTML = `<div class="pf-panel"><div class="pf-panel-head"><h3>可转债</h3><span class="pf-signal">数据未生成</span></div><div class="pf-desc">cb_data.json 不存在 - 先运行 <b>build_cb_dashboard.py</b> (拉取集思录行情 + 条款字典筛选) 生成数据。</div></div>`;
     return;
   }
   const S = CB.stats || {};
@@ -1445,10 +1457,24 @@ function renderCbFrame() {
   const strip = `<div class="cb-strip">
     <div class="cell">全市场<b>${S.spot??'—'}</b>只</div>
     <div class="cell">存续债<b>${S.full??'—'}</b>只</div>
-    <div class="cell">强赎预警<b style="color:#e5484d">${S.redeem_alert??'—'}</b>只</div>
-    <div class="cell">双低池<b>${(CB.dual_low||[]).length}</b>只</div>
     <div class="cell">更新<b>${CB.updated||'—'}</b></div>
   </div>`;
+  // ---- 策略 tab 条: 全部 + 各策略池 + 强赎/双低/异动 (带数量角标, hash 持久化 #cb=key) ----
+  const TABS = [
+    { key:'all', name:'全部', count:(CB.strategies||[]).reduce((a,s)=>a+(s.items||[]).length, 0) },
+    ...(CB.strategies||[]).map(s => ({ key:s.key, name:s.name, count:(s.items||[]).length })),
+    { key:'redeem', name:'强赎预警', count:(CB.redeem_alerts||[]).length, hot:true },
+    { key:'dual', name:'双低池', count:(CB.dual_low||[]).length },
+    { key:'movers', name:'异动榜', count:(CB.movers||[]).length },
+  ];
+  let cur = 'all';
+  const hm = (location.hash||'').match(/^#cb=([\w-]+)/);
+  if (hm && TABS.some(t => t.key === hm[1])) cur = hm[1];
+  const tabBar = `<div class="cb-tabs">${TABS.map(t => {
+    const on = t.key===cur ? ' on' : '';
+    const hot = t.hot ? ' hot' : '';
+    return `<button class="cb-tab${on}" data-tab="${t.key}">${t.name}<span class="cnt${hot}">${t.count??0}</span></button>`;
+  }).join('')}</div>`;
   // deep 索引: code → 深析条目
   const deepMap = {};
   ((CB.deep&&CB.deep.strategies)||[]).forEach(g => (g.items||[]).forEach(it => { deepMap[it.code] = it; }));
@@ -1510,7 +1536,7 @@ function renderCbFrame() {
     return `<div class="pf-panel" style="animation-delay:${delay}ms"><div class="pf-panel-head"><h3><span class="pf-num">退</span>退出纪律</h3><span class="pf-signal">${rules.length} 条 · 条件满足即执行</span></div><div class="exit-list">${rows}</div></div>`;
   };
   // 策略板块: 描述 + 候选池表格(含触发比例) + 深析卡常驻
-  const stratPanels = (CB.strategies||[]).map((s, i) => {
+  const stratPanel = (s, num, delay) => {
     const sg = CFG[s.key] || {};
     const atype = sg.analysis || 'four_dim';
     const rows = (s.items||[]).map(r => `<tr>
@@ -1526,39 +1552,69 @@ function renderCbFrame() {
       <td class="num" style="color:${r.revise_ratio?'#3fb950':'#5c5c5c'}">${r.revise_ratio!=null?r.revise_ratio+'% 触发':'—'}</td>
     </tr>`).join('');
     const deepCards = (s.items||[]).map(r => deepCard(deepMap[r.code], atype)).join('');
-    return `<div class="pf-panel" style="animation-delay:${i*70}ms"><div class="pf-panel-head"><h3><span class="pf-num">${i+1}</span>${s.name||s.key}</h3><span class="pf-signal">${(s.items||[]).length} 只候选 · ${s.desc||''}</span></div>
+    return `<div class="pf-panel" style="animation-delay:${delay}ms"><div class="pf-panel-head"><h3><span class="pf-num">${num}</span>${s.name||s.key}</h3><span class="pf-signal">${(s.items||[]).length} 只候选 · ${s.desc||''}</span></div>
       <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>转股价值</th><th>溢价%</th><th>评级</th><th>剩年</th><th>规模亿</th><th>回售起始</th><th>触发比例</th></tr></thead>
-      <tbody>${rows || '<tr><td class="empty" colspan="10">当前无候选 —— 条件未满足或行情未更新</td></tr>'}</tbody></table>
+      <tbody>${rows || '<tr><td class="empty" colspan="10">当前无候选 - 条件未满足或行情未更新</td></tr>'}</tbody></table>
       ${deepCards?`<div class="deep-grid">${deepCards}</div>`:''}
-    </div>` + rulesHtml(sg, (i+1)*70+40) + exitHtml(sg, (i+1)*70+80);
-  }).join('');
+    </div>`;
+  };
   // 强赎预警
-  const alertRows = (CB.redeem_alerts||[]).map(r => `<tr>
-    <td class="bond">${r.name||'—'}</td><td class="num">${r.code||'—'}</td>
-    <td class="num">${r.price??'—'}</td>
-    <td style="color:#f85149">${r.status||'—'}</td>
-    <td class="num">${r.last_day||'—'}</td></tr>`).join('');
-  const alertPanel = `<div class="pf-panel" style="animation-delay:${(CB.strategies||[]).length*70}ms"><div class="pf-panel-head"><h3><span class="pf-num">${(CB.strategies||[]).length+1}</span>强赎预警</h3><span class="pf-signal">已公告/临近强赎 → 持有者必须离场或转股</span></div>
-    <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>状态</th><th>最后交易日</th></tr></thead>
-    <tbody>${alertRows || '<tr><td class="empty" colspan="5">当前无强赎预警</td></tr>'}</tbody></table></div>`;
+  const alertPanel = () => {
+    const rows = (CB.redeem_alerts||[]).map(r => `<tr>
+      <td class="bond">${r.name||'—'}</td><td class="num">${r.code||'—'}</td>
+      <td class="num">${r.price??'—'}</td>
+      <td style="color:#f85149">${r.status||'—'}</td>
+      <td class="num">${r.last_day||'—'}</td></tr>`).join('');
+    return `<div class="pf-panel" style="animation-delay:0ms"><div class="pf-panel-head"><h3><span class="pf-num">警</span>强赎预警</h3><span class="pf-signal">已公告/临近强赎 → 持有者必须离场或转股</span></div>
+      <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>状态</th><th>最后交易日</th></tr></thead>
+      <tbody>${rows || '<tr><td class="empty" colspan="5">当前无强赎预警</td></tr>'}</tbody></table></div>`;
+  };
   // 双低池
-  const dualRows = (CB.dual_low||[]).map(r => `<tr>
-    <td class="bond">${r.name||'—'}</td><td class="num">${r.code||'—'}</td>
-    <td class="num">${r.price??'—'}</td><td class="num">${r.dual??'—'}</td>
-    <td class="num" style="color:${(r.prem??0)<=0?'#3fb950':'#f85149'}">${pct(r.prem)}</td>
-    <td>${r.rating||'—'}</td><td class="num">${r.years??'—'}</td><td class="num">${r.scale??'—'}</td></tr>`).join('');
-  const dualPanel = `<div class="pf-panel" style="animation-delay:${((CB.strategies||[]).length+1)*70}ms"><div class="pf-panel-head"><h3><span class="pf-num">${(CB.strategies||[]).length+2}</span>双低池</h3><span class="pf-signal">价格低 + 溢价低 (90-125元, 高评级) → 债底保护</span></div>
-    <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>双低值</th><th>溢价%</th><th>评级</th><th>剩年</th><th>规模亿</th></tr></thead>
-    <tbody>${dualRows || '<tr><td class="empty" colspan="8">当前无双低候选</td></tr>'}</tbody></table></div>`;
+  const dualPanel = () => {
+    const rows = (CB.dual_low||[]).map(r => `<tr>
+      <td class="bond">${r.name||'—'}</td><td class="num">${r.code||'—'}</td>
+      <td class="num">${r.price??'—'}</td><td class="num">${r.dual??'—'}</td>
+      <td class="num" style="color:${(r.prem??0)<=0?'#3fb950':'#f85149'}">${pct(r.prem)}</td>
+      <td>${r.rating||'—'}</td><td class="num">${r.years??'—'}</td><td class="num">${r.scale??'—'}</td></tr>`).join('');
+    return `<div class="pf-panel" style="animation-delay:0ms"><div class="pf-panel-head"><h3><span class="pf-num">双</span>双低池</h3><span class="pf-signal">价格低 + 溢价低 (90-125元, 高评级) → 债底保护</span></div>
+      <table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>双低值</th><th>溢价%</th><th>评级</th><th>剩年</th><th>规模亿</th></tr></thead>
+      <tbody>${rows || '<tr><td class="empty" colspan="8">当前无双低候选</td></tr>'}</tbody></table></div>`;
+  };
   // 异动
-  const moverRows = (CB.movers||[]).map(r => `<tr>
-    <td class="bond">${r.name||'—'}</td><td class="num">${r.price??'—'}</td>
-    <td class="num" style="color:${(r.chg??0)>=0?'#f85149':'#3fb950'}">${pct(r.chg)}</td></tr>`).join('');
-  const moverPanel = `<div class="pf-panel" style="animation-delay:${((CB.strategies||[]).length+2)*70}ms"><div class="pf-panel-head"><h3><span class="pf-num">${(CB.strategies||[]).length+3}</span>异动榜</h3><span class="pf-signal">单日涨跌 ≥3% (红涨绿跌)</span></div>
-    <table class="cb-table"><thead><tr><th>名称</th><th>现价</th><th>涨跌%</th></tr></thead>
-    <tbody>${moverRows || '<tr><td class="empty" colspan="3">今日无异动</td></tr>'}</tbody></table></div>`;
-  $('indPanel').innerHTML = strip + stratPanels + alertPanel + dualPanel + moverPanel;
+  const moverPanel = () => {
+    const rows = (CB.movers||[]).map(r => `<tr>
+      <td class="bond">${r.name||'—'}</td><td class="num">${r.price??'—'}</td>
+      <td class="num" style="color:${(r.chg??0)>=0?'#f85149':'#3fb950'}">${pct(r.chg)}</td></tr>`).join('');
+    return `<div class="pf-panel" style="animation-delay:0ms"><div class="pf-panel-head"><h3><span class="pf-num">异</span>异动榜</h3><span class="pf-signal">单日涨跌 ≥3% (红涨绿跌)</span></div>
+      <table class="cb-table"><thead><tr><th>名称</th><th>现价</th><th>涨跌%</th></tr></thead>
+      <tbody>${rows || '<tr><td class="empty" colspan="3">今日无异动</td></tr>'}</tbody></table></div>`;
+  };
+  // ---- 按 tab 组装 ----
+  let body;
+  if (cur === 'all') {
+    body = (CB.strategies||[]).map((s, i) => stratPanel(s, i+1, i*70) + rulesHtml(CFG[s.key]||{}, (i+1)*70+40) + exitHtml(CFG[s.key]||{}, (i+1)*70+80)).join('') + alertPanel() + dualPanel() + moverPanel();
+  } else if (cur === 'redeem') {
+    body = alertPanel();
+  } else if (cur === 'dual') {
+    body = dualPanel();
+  } else if (cur === 'movers') {
+    body = moverPanel();
+  } else {
+    const i = (CB.strategies||[]).findIndex(s => s.key === cur);
+    const s = (CB.strategies||[])[i];
+    body = stratPanel(s, i+1, 0) + rulesHtml(CFG[s.key]||{}, 40) + exitHtml(CFG[s.key]||{}, 80);
+  }
+  $('indPanel').innerHTML = strip + tabBar + body;
   $('legendNote').innerHTML = '';
+  // tab 点击 → hash 持久化 (#cb=key), hashchange 统一重渲染
+  document.querySelectorAll('.cb-tab').forEach(b => b.onclick = () => {
+    if (b.dataset.tab === cur) return;
+    location.hash = 'cb=' + b.dataset.tab;
+  });
+  if (!window.__cbHashBound) {
+    window.__cbHashBound = true;
+    window.addEventListener('hashchange', () => { if (state.asset === 'cb') renderCbFrame(); });
+  }
   // 渲染雷达图 (echarts)
   if (typeof echarts !== 'undefined') {
     document.querySelectorAll('.radar-box[data-radar]').forEach(el => {
