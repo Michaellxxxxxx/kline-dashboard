@@ -386,12 +386,12 @@ function buildQqqCards() {
   const rsiSeries = DATA.qqq.map(r=>({t:r.t, v:r.rsi})).filter(p=>p.v!=null);
   const volSeries = DATA.qqq.map(r=>({t:r.t, v:r.vol20})).filter(p=>p.v!=null);
   return [
-    {name:'MA200 趋势', weight:'权重 25%', val:maDist==null?'—':fmtPct(maDist*100), unit:'', sub:`MA200 ${fmt$(QQ.ma200,2)} · 牛熊分界线 · 价格在上=多, 在下=空`,
+    {name:'MA200 趋势', weight:'权重 25%', val:maDist==null?'—':fmtPct(maDist*100), unit:'', sub:`MA200 ${fmt$(QQ.ma200,2)} · 乖离率轴线 0牛熊分界 / +20过热 / -15超卖 · 价格在上=多, 在下=空`,
      bar:maDist==null?50:clamp((maDist+0.3)/0.6,0,1)*100, score:maScore,
-     stage: maDist==null?'—':maDist<0?'跌破200日线·转弱':maDist<0.1?'贴线挣扎':'200日线上方·趋势健康',
-     stageCls: maDist==null?'n':maDist<0?'r':maDist<0.1?'y':'g',
-     advice: maDist==null?'—':maDist<0?'跌破 200 日线 = 离场/减半信号':maDist<0.1?'贴近 200 日线，跌破即离场':'趋势未破，可持有/定投',
-     why:'200 日均线是长期牛熊分界。历史上主要熊市均以跌破 200 日线确认，跌破后平均还有深度下行；站上 200 日线代表长期趋势健康。',
+     stage: maDist==null?'—':maDist<-0.15?'深度超卖·历史底区':maDist<0?'跌破200日线·转弱':maDist<0.1?'贴线挣扎':maDist<0.2?'200日线上方·趋势健康':'过热乖离·追高风险',
+     stageCls: maDist==null?'n':maDist<-0.15?'g':maDist<0?'r':maDist<0.1?'y':maDist<0.2?'g':'r',
+     advice: maDist==null?'—':maDist<-0.15?'深度超卖（乖离<-15%），历史上是底部区域，可分批接回':maDist<0?'跌破 200 日线 = 离场/减半信号':maDist<0.1?'贴近 200 日线，跌破即离场':'趋势未破，可持有/定投',
+     why:'200 日均线是长期牛熊分界。历史上主要熊市均以跌破 200 日线确认，跌破后平均还有深度下行；站上 200 日线代表长期趋势健康。乖离率轴线（数据实测 1999 起）：0 = 牛熊分界；+20% = 过热线（历史 95 分位，2025 ATH +20.4%、2023 +26%、2020 +32.8% 三轮大顶均在线上方）；-15% = 超卖线（近 10 年仅 2022 熊市触及，极值 -23.8%）。',
      chart:{series: PRICE.qqq, series2: DATA.qqq.map(r=>({t:r.t, v:r.ma200})).filter(p=>p.v!=null), refs:[], s2Label:'MA200', fmt: fmtPrice, s2Fmt: fmtPrice, oFmt: fmtPrice, defOverlay:null}},
     {name:'距 ATH 回撤', weight:'权重 25%', val:dd==null?'—':fmtPct(dd*100), unit:'', sub:`全历史 ATH $${athAll?athAll.toLocaleString():'—'} (${athDate||''}) · 历史大底 -50%~-80%`,
      bar: dd==null?50:clamp((dd+0.6)/0.6,0,1)*100, score:ddScore,
@@ -671,13 +671,66 @@ document.addEventListener('click', e => {
 });
 
 // ============ 详情抽屉 (KLineChart 双图: 主图=价格K线 + 副图=指标, 同步联动) ============
-let drawerCard = null, drawerRange = '1y', drawerOverlay = null;
+let drawerCard = null, drawerRange = '1y', drawerPeriod = 'd', drawerOverlay = null;
 let drawerChart = null;  // 抽屉 KLineChart 实例 (dispose 生命周期)
 const DRAWER_RANGES = {'1m':30, '6m':182, '1y':365, '2y':730, 'max':null};
 function filterSeries(series, days) {
   if (!days || !series || !series.length) return series;
   const t1 = series[series.length-1].t;
   return series.filter(p => p.t >= t1 - days*86400000);
+}
+// 周/月 K线聚合: 按周期桶聚合 OHLCV, 估值指标取周期末值, RSI 重算 (动量必须基于聚合K线)
+function aggKlines(rows, period) {
+  if (period==='d' || !rows || !rows.length) return rows;
+  const m = new Map();
+  const keyOf = period==='w'
+    ? t => { const d = new Date(t); const dow = (d.getDay()+6)%7; d.setDate(d.getDate()-dow); d.setHours(0,0,0,0); return d.getTime(); }
+    : t => { const d = new Date(t); return d.getFullYear()*100 + d.getMonth(); };
+  for (const r of rows) {
+    const key = keyOf(r.t);
+    const p = m.get(key);
+    if (!p) m.set(key, {t:r.t, o:r.o, c:r.c, l:r.l, h:r.h, v:r.v,
+      mvrv:r.mvrv??null, rsi:r.rsi??null, rp:r.rp??null, top:r.top??null, temp:r.temp??null, dv:r.dv??null});
+    else {
+      p.c = r.c; p.h = Math.max(p.h, r.h); p.l = Math.min(p.l, r.l); p.v += r.v;
+      if (r.mvrv!=null) p.mvrv = r.mvrv; if (r.rsi!=null) p.rsi = r.rsi;
+      if (r.rp!=null) p.rp = r.rp; if (r.top!=null) p.top = r.top;
+      if (r.temp!=null) p.temp = r.temp; if (r.dv!=null) p.dv = r.dv;
+    }
+  }
+  let agg = [...m.values()].sort((a,b)=>a.t-b.t);
+  const rsiArr = calcRsi(agg.map(r=>r.c), 14);   // RSI 重算: 基于聚合K线 close (Wilder)
+  agg.forEach((r,i)=>{ if (rsiArr[i]!=null) r.rsi = rsiArr[i]; });
+  const ma200Arr = calcMa(agg.map(r=>r.c), 200); // MA200 (聚合K线口径, 乖离率卡派生用)
+  agg.forEach((r,i)=>{ if (ma200Arr[i]!=null) r.ma200 = ma200Arr[i]; });
+  return agg;
+}
+// 简单移动平均: 前 n-1 个为 null
+function calcMa(closes, n) {
+  const out = new Array(closes.length).fill(null);
+  let sum = 0;
+  for (let i = 0; i < closes.length; i++) {
+    sum += closes[i];
+    if (i >= n) sum -= closes[i-n];
+    if (i >= n-1) out[i] = sum/n;
+  }
+  return out;
+}
+// RSI-14 (Wilder 平滑): 返回与 closes 等长数组, 前 n 个为 null
+function calcRsi(closes, n) {
+  const out = new Array(closes.length).fill(null);
+  if (closes.length <= n+1) return out;
+  let gain = 0, loss = 0;
+  for (let i = 1; i <= n; i++) { const d = closes[i]-closes[i-1]; if (d>=0) gain += d; else loss -= d; }
+  let ag = gain/n, al = loss/n;
+  out[n] = al===0 ? 100 : 100 - 100/(1+ag/al);
+  for (let i = n+1; i < closes.length; i++) {
+    const d = closes[i]-closes[i-1];
+    ag = (ag*(n-1)+Math.max(d,0))/n;
+    al = (al*(n-1)+Math.max(-d,0))/n;
+    out[i] = al===0 ? 100 : 100 - 100/(1+ag/al);
+  }
+  return out;
 }
 function pctRankSeries(series, cur) {
   const vals = series.filter(p=>p.v!=null).map(p=>p.v);
@@ -702,17 +755,21 @@ function closeDrawer() {
   drawerCard = null; drawerChart = null;
 }
 // 副图指标序列: 价格型卡(series 即价格)派生 乖离率/回撤/位置, 指标型卡直接用
+// aggRows: 周期聚合后的 K 线行 (周K/月K 视图价格派生基于聚合收盘价; 缺省=日线)
 // title: 副图指标名 (显示在 tooltip 与 pane 图例), precision: 副图数值精度
-function drawerMetric(c, curAsset) {
+function drawerMetric(c, curAsset, aggRows) {
   const isPriceSeries = c.chart.series === PRICE[curAsset];
   if (!isPriceSeries) return {series: c.chart.series, refs: c.chart.refs||[], title: c.name.split(' ')[0], precision: 2};
-  const price = PRICE[curAsset];
+  const price = aggRows ? aggRows.map(r=>({t:r.t, v:r.c})) : PRICE[curAsset];
   const refs = c.chart.refs||[];
   if (c.chart.series2 && c.chart.series2.length) {
-    // MA200 卡: 乖离率% = (price/ma200 - 1)*100
-    const ma = new Map(c.chart.series2.map(p=>[p.t, p.v]));
+    // MA200 卡: 乖离率% = (price/ma200 - 1)*100 (聚合视图用聚合行的 ma200)
+    // 轴线: 0=牛熊分界(跌破离场) · +20=过热线(历史p95, 三轮大顶 2025+20.4/2023+26/2020+32.8) · -15=超卖线(近10年仅2022触及, 极值-23.8)
+    const maSrc = aggRows ? aggRows.map(r=>({t:r.t, v:r.ma200})) : c.chart.series2;
+    const ma = new Map(maSrc.filter(p=>p.v!=null).map(p=>[p.t, p.v]));
     return {series: price.map(p=>({t:p.t, v: ma.has(p.t)&&ma.get(p.t) ? (p.v/ma.get(p.t)-1)*100 : null})).filter(p=>p.v!=null),
-            refs: [{v:0,color:'#8b8b8b',label:'0'}], fmt: v=>v==null?'—':v.toFixed(1)+'%', title:'乖离率', precision:1};
+            refs: [{v:0,color:'#8b8b8b',label:'0 牛熊分界'},{v:20,color:'#e5484d',label:'+20 过热'},{v:-15,color:'#3fb950',label:'-15 超卖'}],
+            fmt: v=>v==null?'—':v.toFixed(1)+'%', title:'乖离率', precision:1};
   }
   if (refs.length===1 && refs[0].label==='ATH') {
     // 距ATH 卡: 回撤% = (price/ATH - 1)*100
@@ -743,42 +800,45 @@ function renderDrawer() {
   const curAsset = state.asset;
   const pAsset = drawerOverlay || curAsset;   // 主图价格资产 (可切换)
   $('dTitle').textContent = c.name;
-  $('dSub').textContent = `${c.val} · ${c.stage}${c.score==null?'':' · 得分 '+c.score.toFixed(1)+'/10'} · ${pAsset.toUpperCase()} · ${drawerRange==='max'?'全部':drawerRange.toUpperCase()}`;
+  const periodLabel = {d:'日K', w:'周K', m:'月K'}[drawerPeriod]||'日K';
+  $('dSub').textContent = `${c.val} · ${c.stage}${c.score==null?'':' · 得分 '+c.score.toFixed(1)+'/10'} · ${pAsset.toUpperCase()} · ${periodLabel} · ${drawerRange==='max'?'全部':drawerRange.toUpperCase()}`;
   // 副图指标 (派生或原样) + 统计窗口 = drawerRange 过滤
-  const dm = drawerMetric(c, curAsset);
+  // K线数据: 按周期聚合 (日K/周K/月K), MAX 不再默认月线 — 周期由用户选
+  const rows = drawerPeriod==='d' ? DATA[pAsset] : aggKlines(DATA[pAsset], drawerPeriod);
+  const dm = drawerMetric(c, curAsset, drawerPeriod==='d' ? null : rows);
   const all = dm.series;
   const days = DRAWER_RANGES[drawerRange];
-  const t1 = all.length ? all[all.length-1].t : Date.now();
-  const t0 = days ? t1 - days*86400000 : (all.length ? all[0].t : t1);
-  const main = all.filter(p=>p.t>=t0 && p.t<=t1);
-  const vals = main.filter(p=>p.v!=null).map(p=>p.v);
+  const isMax = drawerRange==='max';
+  const view = days ? filterRows(rows, days) : rows;
+  // 统计对象跟随周期: 聚合行上的指标值 (RSI 卡用重算的周期 RSI, 其他卡 attachDv 取周期末值)
+  const dv = (c.name==='RSI-14' && drawerPeriod!=='d') ? view.map(r=>r.rsi) : attachDv(view, all);
+  const vals = dv.filter(v=>v!=null);
   const cur = vals.length? vals[vals.length-1] : null;
   const avg = vals.length? vals.reduce((a,b)=>a+b,0)/vals.length : null;
   const mn = vals.length? Math.min(...vals) : null;
   const mx = vals.length? Math.max(...vals) : null;
-  const pct = pctRankSeries(all, cur);
+  const poor = vals.length>0 && vals.length<10;   // 样本不足: 均值/最低/最高不硬算
+  const dvAll = (c.name==='RSI-14' && drawerPeriod!=='d') ? rows.map(r=>({t:r.t, v:r.rsi})) : (drawerPeriod==='d' ? all : rows.map((r,i)=>({t:r.t, v: attachDv(rows, all)[i]})));
+  const pct = pctRankSeries(dvAll, cur);
   const fmt = dm.fmt || c.chart.fmt;
   const rangeSeg = `<div class="seg" id="dRangeSeg">${Object.keys(DRAWER_RANGES).map(r=>`<button data-range="${r}" class="${r===drawerRange?'on':''}">${r==='max'?'MAX':r.toUpperCase()}</button>`).join('')}</div>`;
+  const periodSeg = `<div class="seg" id="dPeriodSeg">${['d','w','m'].map(p=>`<button data-period="${p}" class="${p===drawerPeriod?'on':''}">${p==='d'?'日K':p==='w'?'周K':'月K'}</button>`).join('')}</div>`;
   const ovSeg = `<div class="d-ovseg"><button data-ov="btc" class="${pAsset==='btc'?'on':''}">BTC</button><button data-ov="qqq" class="${pAsset==='qqq'?'on':''}">QQQ</button></div>`;
   $('dBody').innerHTML =
-    `<div class="d-toolbar">${rangeSeg}<span class="d-hint">🖱 拖动平移 · 滚轮缩放 · 十字光标读数</span></div>`
+    `<div class="d-toolbar">${periodSeg}${rangeSeg}<span class="d-hint">🖱 拖动平移 · 滚轮缩放 · 十字光标读数</span></div>`
     + `<div class="d-chart">${ovSeg}<div id="dKline"></div></div>`
     + `<div class="d-stats">
         <div class="d-stat"><div class="k">当前值</div><div class="v">${fmt(cur)}</div></div>
-        <div class="d-stat"><div class="k">窗口均值</div><div class="v">${fmt(avg)}</div></div>
-        <div class="d-stat"><div class="k">窗口最低</div><div class="v">${fmt(mn)}</div></div>
-        <div class="d-stat"><div class="k">窗口最高</div><div class="v">${fmt(mx)}</div></div>
+        <div class="d-stat"><div class="k">窗口均值</div><div class="v">${poor?'样本不足':fmt(avg)}</div></div>
+        <div class="d-stat"><div class="k">窗口最低</div><div class="v">${poor?'样本不足':fmt(mn)}</div></div>
+        <div class="d-stat"><div class="k">窗口最高</div><div class="v">${poor?'样本不足':fmt(mx)}</div></div>
         <div class="d-stat"><div class="k">历史分位</div><div class="v">${pct!=null?pct.toFixed(0)+'%':'—'}</div></div>
         <div class="d-stat"><div class="k">阶段判定</div><div class="v" style="font-size:12px">${c.stage}</div></div>
       </div>`
     + `<div class="d-block">💡 <b>建议</b>：${c.advice}</div>`
     + `<div class="d-block">📐 <b>为什么能判断顶底</b>：${c.why}</div>`;
-  // 主图 K线数据: 当前页资产全历史, 按 range 过滤 (max = 月线聚合)
-  const isMax = drawerRange==='max';
-  const rows = isMax ? toMonthly(DATA[pAsset]) : DATA[pAsset];
-  const view = days ? filterRows(rows, days) : rows;
+  // 主图 K线数据: rows/view/dv 已在统计段按周期聚合 + 范围过滤
   // 副图指标 attach 到 K 线行 (前向填充)
-  const dv = attachDv(view, all);
   const kl = view.map((r,i) => ({timestamp:r.t, open:r.o, high:r.h, low:r.l, close:r.c, volume:r.v, dv: dv[i]}));
   // MVRV 卡抽屉: 副图画逐日浮动顶线 (dv2, 前向填充; 其他卡不画)
   if (c.name==='MVRV 估值') {
@@ -807,6 +867,14 @@ function renderDrawer() {
   __drwAnchor = {lo: lo-pad, hi: hi+pad};
   __drwRefs = dm.refs || [];
   drawerChart.applyNewData(kl);
+  // MAX+日K: 全历史 6891 根一屏放不下 — 开局定位最近 500 根, 拖动/缩放看全历史
+  if (isMax && drawerPeriod==='d' && kl.length > 500) {
+    const w = $('dKline').clientWidth || 800;
+    const want = Math.max(1, w / 500);
+    const bs = drawerChart.getBarSpace();
+    if (want < bs) drawerChart.zoomAtCoordinate(want / bs, {x: w, y: 0});
+    drawerChart.scrollToDataIndex(kl.length - 1, 1);
+  }
   // 主图叠加: 当前价线 + 价格量级 refs (ATH/52高/52低) + MA50/MA200 (QQQ 非 MAX)
   const curP = view[view.length-1].c;
   drawerChart.createOverlay({name:'horizontalSegment', points:[{value:curP},{value:curP}], styles:{line:{color:'#fafafa', size:1.2, style:'solid'}}});
@@ -815,7 +883,8 @@ function renderDrawer() {
       drawerChart.createOverlay({name:'horizontalSegment', points:[{value:r.v},{value:r.v}], styles:{line:{color:r.color, size:1, style:'dashed'}}});
     });
   }
-  if (pAsset==='qqq' && !isMax) {
+  // 均线: 日K/周K 叠加 MA50/MA200 (KLineChart 自动按喂入数据重算), 月K 不叠加 (MA200=16.7年无意义)
+  if (pAsset==='qqq' && drawerPeriod!=='m') {
     drawerChart.createIndicator({name:'MA', calcParams:[50]}, true, {id:'candle_pane'});
     drawerChart.createIndicator({name:'MA', calcParams:[200]}, true, {id:'candle_pane'});
   }
@@ -824,8 +893,9 @@ function renderDrawer() {
   registerDrw(dm.title || '指标', dm.precision != null ? dm.precision : 2);
   drawerChart.setPaneOptions('candle_pane', {height: Math.min(340, Math.max(220, (document.getElementById('dKline').clientHeight||420) - 190))});
   drawerChart.createIndicator('DRW', false, {id:'c_drw', height:150});
-  // 范围切换
+  // 范围切换 + 周期切换
   $('dRangeSeg').querySelectorAll('button').forEach(b => b.onclick = () => { drawerRange = b.dataset.range; renderDrawer(); });
+  $('dPeriodSeg').querySelectorAll('button').forEach(b => b.onclick = () => { drawerPeriod = b.dataset.period; renderDrawer(); });
   $('dBody').querySelectorAll('.d-ovseg button').forEach(b => b.onclick = () => { drawerOverlay = b.dataset.ov; renderDrawer(); });
 }
 // 抽屉图 resize (窗口变化时跟随)
