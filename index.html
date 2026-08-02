@@ -561,12 +561,7 @@ function renderCards() {
     <div class="m-scale"><span>低估/底部</span><span>高估/顶部</span></div>`}
     <div class="m-quant">${c.score==null ? (c.envNote||'') : `顶底量化位置 ${clamp(c.bar,0,100).toFixed(0)}% · 得分 ${c.score.toFixed(1)}/10`}</div>
     ${c.chart?`
-    <div class="m-chart d-enlarge" data-card="${c.name}">
-      <span class="d-zoom">⤢ 放大</span>
-      <div class="m-ovseg">
-        <button data-ov="">—</button>
-        <button data-ov="${state.asset}">${state.asset.toUpperCase()}</button>
-      </div>
+    <div class="m-chart d-enlarge" data-card="${c.name}" title="点击放大 · ESC 退出">
       <div class="m-chart-body"></div>
       <div class="m-tt"></div>
     </div>
