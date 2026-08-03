@@ -1033,7 +1033,7 @@ function renderDrawer() {
   const ovSeg = `<div class="d-ovseg"><button data-ov="btc" class="${pAsset==='btc'?'on':''}">BTC</button><button data-ov="qqq" class="${pAsset==='qqq'?'on':''}">QQQ</button></div>`;
   const maSeg = `<div class="seg d-maseg" id="dMaSeg"><button data-ma="50" class="${drawerMa[drawerPeriod][50]?'on':''}">MA50</button><button data-ma="200" class="${drawerMa[drawerPeriod][200]?'on':''}">MA200</button></div>`;
   $('dBody').innerHTML =
-    `<div class="d-toolbar">${periodSeg}${maSeg}${rangeSeg}<span class="d-hint">🖱 拖动平移 · 滚轮缩放 · 十字光标读数</span></div>`
+    `<div class="d-toolbar">${periodSeg}${maSeg}${rangeSeg}<span class="d-hint">🖱 拖动平移 · 滚轮缩放 · 十字光标读数 · ESC 退出</span></div>`
     + `<div class="d-chart">${ovSeg}<div id="dKline"></div></div>`
     + `<div class="d-stats">
         <div class="d-stat"><div class="k">当前值</div><div class="v">${fmt(cur)}</div></div>
@@ -1126,6 +1126,10 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('click', e => {
   if (e.target.id==='dClose' || e.target.id==='drawerMask') closeDrawer();
+});
+// ESC 退出抽屉 (与卡片 title 提示一致; 守卫 open class, 抽屉已关时 ESC 无谓触发)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('drawer').classList.contains('open')) closeDrawer();
 });
 
 function renderScore(cards) {
