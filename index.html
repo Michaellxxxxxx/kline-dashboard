@@ -112,6 +112,7 @@ details.m-why[open] summary{color:var(--faint)}
 .cb-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:0}
 .cb-table-wrap.w10 .cb-table{min-width:740px}
 .cb-table-wrap.w8 .cb-table{min-width:620px}
+.cb-table-wrap.w6 .cb-table{min-width:580px}
 .cb-table-wrap.w5 .cb-table{min-width:500px}
 .cb-empty{color:var(--faint);text-align:center;padding:20px 0;font-size:12px;border:1px dashed var(--border);border-radius:8px;margin-top:4px}
 .cb-table th{text-align:left;padding:6px 10px;color:#c8c8c8;font-weight:600;font-size:11px;border-bottom:1px solid var(--border2);white-space:nowrap}
@@ -1755,10 +1756,11 @@ function renderCbFrame() {
     const rows = (CB.redeem_alerts||[]).map(r => `<tr>
       <td class="bond">${jsl(r.code, r.name)}</td><td class="num">${jsl(r.code)}</td>
       <td class="num">${r.price??'—'}</td>
+      <td class="num">${r.redeem_price!=null ? (r.redeem_price_est?'~':'')+r.redeem_price : '—'}</td>
       <td style="color:#f85149">${r.status||'—'}</td>
       <td class="num">${r.last_day||'—'}</td></tr>`).join('');
     return `<div class="pf-panel" style="animation-delay:0ms"><div class="pf-panel-head"><h3><span class="pf-num">警</span>强赎预警</h3><span class="pf-signal">已公告/临近强赎 → 持有者必须离场或转股</span></div>
-      ${rows ? `<div class="cb-table-wrap w5"><table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>状态</th><th>最后交易日</th></tr></thead>
+      ${rows ? `<div class="cb-table-wrap w6"><table class="cb-table"><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>强赎价</th><th>状态</th><th>最后交易日</th></tr></thead>
       <tbody>${rows}</tbody></table></div>` : '<div class="cb-empty">当前无强赎预警</div>'}</div>`;
   };
   // 双低池
