@@ -911,7 +911,7 @@ function renderCards() {
   renderCharts(cards);
 }
 // ============ 详情抽屉 (KLineChart 双图: 主图=价格K线 + 副图=指标, 同步联动) ============
-let drawerCard = null, drawerRange = '1y', drawerPeriod = 'd', drawerOverlay = null;
+let drawerCard = null, drawerRange = 'max', drawerPeriod = 'd', drawerOverlay = null;
 let drawerMa = {d:{50:true,200:true}, w:{50:true,200:true}, m:{50:false,200:false}};  // 每周期 MA50/MA200 开关独立记忆
 let drawerChart = null;  // 抽屉 KLineChart 实例 (dispose 生命周期)
 const DRAWER_RANGES = {'1m':30, '6m':182, '1y':365, '2y':730, 'max':null};
@@ -985,7 +985,7 @@ function winSeries(series) {
   return series.filter(p => p.t >= dWin.from && p.t <= dWin.to);
 }
 function openDrawer(card) {
-  drawerCard = card; drawerRange = '1y'; drawerOverlay = null;
+  drawerCard = card; drawerRange = 'max'; drawerOverlay = null;
   renderDrawer();
   $('drawerMask').classList.add('open');
   $('drawer').classList.add('open');
