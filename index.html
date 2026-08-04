@@ -1090,6 +1090,11 @@ function renderDrawer() {
     const ec = attachDv(view, (DATA.etf_cost_hist||[]).map(p=>({t:p[0], v:p[1]})));
     kl.forEach((k,i)=>{ k.ec = ec[i]; });
   }
+  // M2 卡抽屉: 副图叠加橙线 = 美联储资产负债表同比 (dv4, 近3年, 与卡图同窗口) — M2 的前瞻引擎
+  if (c.name==='全球流动性 M2 同比') {
+    const wal = attachDv(view, (DATA.walcl_yoy||[]).slice(-36).map(p=>({t:p[0], v:p[1]})));
+    kl.forEach((k,i)=>{ k.dv4 = wal[i]; });
+  }
   // dispose 旧实例 (innerHTML 重建销毁了旧节点, 必须先 dispose)
   if (drawerChart) { try { drawerChart.dispose(); } catch(e){} drawerChart = null; }
   drawerChart = klinecharts.init($('dKline'));
@@ -1109,6 +1114,9 @@ function renderDrawer() {
   // 华尔街成本线 (dv3) 参与锚点值域 — 其区间 0.85~1.95 与 MVRV 同量纲, 防越界
   const ecVals = kl.map(k=>k.ec).filter(v=>v!=null);
   if (ecVals.length) { lo = Math.min(lo, ...ecVals); hi = Math.max(hi, ...ecVals); }
+  // 资产负债表同比 (dv4) 参与锚点值域 — M2 卡副图橙线, 区间约 -14~+2 与 M2 同比同量纲
+  const walVals = kl.map(k=>k.dv4).filter(v=>v!=null);
+  if (walVals.length) { lo = Math.min(lo, ...walVals); hi = Math.max(hi, ...walVals); }
   (dm.refs||[]).forEach(r => { lo = Math.min(lo, r.v); hi = Math.max(hi, r.v); });
   if (c.chart.cap != null) hi = Math.min(hi, c.chart.cap);
   const pad = (hi-lo)*0.12 || 1;
@@ -1431,8 +1439,10 @@ klinecharts.registerIndicator({
 //   浮动顶线 figure (dv2) 仅 MVRV 卡注册 — 其他卡 tooltip 不再出现 "浮动顶: n/a"
 let __drwRefs = [], __drwAnchor = {lo: 0, hi: 100};
 let __drwShowFlt = false;
+let __drwShowWalcl = false;
 function registerDrw(title, precision) {
   __drwShowFlt = (drawerCard && drawerCard.name === 'MVRV 估值');
+  __drwShowWalcl = (drawerCard && drawerCard.name === '全球流动性 M2 同比');
   const figs = [
     {key:'dv', title: title+': ', type:'line', styles: ()=>({style:'solid', color:'#fafafa', size:1.5})},
   ];
@@ -1440,12 +1450,15 @@ function registerDrw(title, precision) {
     figs.push({key:'dv2', title:'浮动顶: ', type:'line', styles: ()=>({style:'dashed', color:'#d29922', size:1})});
     figs.push({key:'dv3', title:'华尔街: ', type:'line', styles: ()=>({style:'dashed', color:'#58a6ff', size:1})});
   }
+  if (__drwShowWalcl) {
+    figs.push({key:'dv4', title:'资产负债表: ', type:'line', styles: ()=>({style:'solid', color:'#d29922', size:1})});
+  }
   figs.push({key:'anchorLow', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})});
   figs.push({key:'anchorHigh', title:'', type:'line', styles: ()=>({style:'solid', color:'rgba(0,0,0,0)', size:0})});
   klinecharts.registerIndicator({
     name: 'DRW', shortName: title, precision: precision,
     figures: figs,
-    calc: (dataList) => dataList.map(k => ({dv: k.dv ?? null, dv2: k.m_top ?? null, dv3: k.ec ?? null, anchorLow: __drwAnchor.lo, anchorHigh: __drwAnchor.hi})),
+    calc: (dataList) => dataList.map(k => ({dv: k.dv ?? null, dv2: k.m_top ?? null, dv3: k.ec ?? null, dv4: k.dv4 ?? null, anchorLow: __drwAnchor.lo, anchorHigh: __drwAnchor.hi})),
     draw: (params) => {
       const {ctx, yAxis} = params;
       const w = ctx.canvas.width, h = ctx.canvas.height;
