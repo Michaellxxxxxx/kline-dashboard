@@ -319,7 +319,7 @@ details.m-why[open] summary{color:var(--faint)}
 </div>
 <div class="chart-card" id="chartCard"><div id="chart"></div></div>
 <div class="legend-note" id="legendNote"></div>
-<footer>规则: BTC MVRV 底1.0重仓/顶线参考 · QQQ 跌破200日线离场 · RSI评分用周线14(超买70/超卖30) · 仅供自用参考</footer>
+<footer id="footRule"></footer>
 </div>
 <div class="drawer-mask" id="drawerMask"></div>
 <div class="drawer" id="drawer">
@@ -2002,7 +2002,15 @@ document.querySelectorAll('#typeSeg button').forEach(b => b.onclick = () => {
 });
 
 let __firstRender = true;
+// 底部规则条: 按资产显示各自规则 (原为全站硬编码 BTC/QQQ 文案, 可转债页错位)
+const FOOT_RULES = {
+  btc: '规则: BTC MVRV 底1.0重仓/顶线参考 · RSI评分用周线14(超买70/超卖30) · 仅供自用参考',
+  qqq: '规则: QQQ 跌破200日线离场 · RSI评分用周线14(超买70/超卖30) · 仅供自用参考',
+  cb: '规则: 强赎公告→离场或转股 · 回售跌破触发价(转股价70%)→下修或还钱 · 评级下调/正股ST→无条件清仓 · 仅供自用参考',
+  macro: '规则: 宏观环境卡只作背景参考, 不直接触发交易 · 仅供自用参考'
+};
 function render() {
+  const fr = $('footRule'); if (fr) fr.textContent = FOOT_RULES[state.asset] || FOOT_RULES.btc;
   if (!__firstRender) {
     const fade = ['toolbar','chartCard','legendNote'].filter(id => $(id).style.display !== 'none');
     fade.forEach(id => { const el = $(id); el.style.opacity = '0'; el.style.transition = 'opacity .25s ease'; requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = '1'; })); });
